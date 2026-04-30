@@ -176,7 +176,8 @@ bot.on('callback_query', async (query) => {
 • ☯️ Мандала выбора цвета — ритуал для понимания своей энергии
 • 🌳 Работа с родом — освобождение от сценариев
 
-💰 *Стоимость:* 450 BYN (всё включено)
+💰 *Стоимость:* 600 BYN (всё включено)
+💳 *Для бронирования:* предоплата 200 BYN
 
 📞 *Запись и вопросы:* @${ORGANIZER_TG}
 
@@ -253,6 +254,9 @@ bot.on('callback_query', async (query) => {
         bot.sendMessage(chatId,
             `✨ *Запись на ретрит*
 
+💰 *Полная стоимость:* 600 BYN
+💳 *Предоплата:* 200 BYN для бронирования места
+
 📞 Свяжитесь с организатором: @${ORGANIZER_TG}
 📞 Или позвоните: ${ORGANIZER_PHONE}
 
@@ -283,14 +287,14 @@ bot.onText(/🎁 Получить подарок/, (msg) => {
 
 bot.onText(/🌿 О ретрите/, (msg) => {
     bot.sendMessage(msg.chat.id,
-        `🌿 *Ретрит «Инь·Янь. Баланс»*\n\n📅 29–31 мая 2026\n📍 Могилёвская область\n💰 450 BYN\n\n📞 ${ORGANIZER_PHONE}`,
+        `🌿 *Ретрит «Инь·Янь. Баланс»*\n\n📅 29–31 мая 2026\n📍 Могилёвская область\n💰 *Стоимость:* 600 BYN (всё включено)\n💳 *Предоплата:* 200 BYN для бронирования\n\n📞 ${ORGANIZER_PHONE}`,
         { parse_mode: 'Markdown' }
     );
 });
 
 bot.onText(/❓ FAQ/, (msg) => {
     bot.sendMessage(msg.chat.id,
-        `❓ *Частые вопросы*\n\n1️⃣ *Нужен опыт?* Нет\n2️⃣ *Что взять?* Удобную одежду, купальник\n3️⃣ *Телефоны?* Сдаются на входе\n4️⃣ *Оплата?* Предоплата 100 BYN\n\n📞 ${ORGANIZER_PHONE}`,
+        `❓ *Частые вопросы*\n\n1️⃣ *Нужен опыт?* Нет, практики для любого уровня.\n2️⃣ *Что взять?* Удобную одежду, купальник, тапки.\n3️⃣ *Телефоны?* Сдаются на входе — полное погружение.\n4️⃣ *Можно с подругой?* Да, можно в одной комнате.\n5️⃣ *Как оплатить?* Предоплата 200 BYN для бронирования. Остаток 400 BYN при заезде.\n6️⃣ *Трансфер?* Да, из Минска туда и обратно.\n\n📞 ${ORGANIZER_PHONE}`,
         { parse_mode: 'Markdown' }
     );
 });
@@ -309,7 +313,10 @@ bot.onText(/🌐 Сайт/, (msg) => {
 });
 
 bot.onText(/Хочу на ретрит/i, (msg) => {
-    bot.sendMessage(msg.chat.id, `✨ Отлично!\n\n📞 Свяжись: @${ORGANIZER_TG} или ${ORGANIZER_PHONE}`, { parse_mode: 'Markdown' });
+    bot.sendMessage(msg.chat.id, 
+        `✨ Отлично!\n\n💰 Стоимость: 600 BYN\n💳 Предоплата: 200 BYN\n\n📞 Свяжись: @${ORGANIZER_TG} или ${ORGANIZER_PHONE}`,
+        { parse_mode: 'Markdown' }
+    );
 });
 
 // ===== ТЕСТ =====
@@ -349,7 +356,7 @@ bot.on('callback_query', (query) => {
     }
 });
 
-// Health check сервер
+// ===== HEALTH CHECK СЕРВЕР =====
 const server = http.createServer((req, res) => {
     res.writeHead(200, { 'Content-Type': 'text/plain' });
     res.end('Bot is running');
@@ -357,4 +364,4 @@ const server = http.createServer((req, res) => {
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, '0.0.0.0', () => console.log(`✅ Health check on port ${PORT}`));
 
-console.log('✅ Бот запущен! Диалог начинается сразу.');
+console.log('✅ Бот запущен! Цена: 600 BYN, предоплата: 200 BYN');
