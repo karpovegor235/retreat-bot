@@ -135,63 +135,63 @@ bot.on('message', (msg) => {
     }
 });
 
-// ===== ОБРАБОТКА INLINE-КНОПОК (ВСЕ РАБОТАЮТ) =====
-bot.on('callback_query', async (query) => {
+// ===== ОБРАБОТКА INLINE-КНОПОК (ПРОСТОЙ РАБОЧИЙ ВАРИАНТ) =====
+bot.on('callback_query', (query) => {
     const chatId = query.message.chat.id;
     const data = query.data;
-    const dialog = userDialogs[chatId];
+    const messageId = query.message.message_id;
     
-    // Обработка выбора опыта
-    if (data && data.startsWith('exp_')) {
+    console.log('Callback получен:', data);
+    
+    // 1. ВЫБОР ОПЫТА В ДИАЛОГЕ
+    if (data === 'exp_never' || data === 'exp_few' || data === 'exp_many') {
         const expMap = {
             'exp_never': '✨ Никогда, но хочу попробовать',
             'exp_few': '🌱 Был 1-2 раза',
             'exp_many': '🌸 Да, регулярно участвую'
         };
+        const dialog = userDialogs[chatId];
         if (dialog && dialog.step === 'experience') {
             dialog.data.experience = expMap[data];
             dialog.step = 'want';
-            bot.sendMessage(chatId, `🌿 *Что бы ты хотела получить от ретрита?*\n\nНапиши своими словами ✍️`, { parse_mode: 'Markdown' });
-            bot.answerCallbackQuery(query.id);
+            bot.editMessageText(`🌿 *Что бы ты хотела получить от ретрита?*\n\nНапиши своими словами ✍️`, {
+                chat_id: chatId,
+                message_id: messageId,
+                parse_mode: 'Markdown'
+            });
         }
+        bot.answerCallbackQuery(query.id);
         return;
     }
     
-    // ✅ ПОДРОБНЕЕ О РЕТРИТЕ (РАБОТАЕТ)
+    // 2. ПОДРОБНЕЕ О РЕТРИТЕ
     if (data === 'detailed_retreat') {
         bot.sendMessage(chatId,
             `🌿 *Подробнее о ретрите «Инь·Янь. Баланс»*
 
-📍 *Где?* Загородный коттедж в Могилёвской области, среди леса и тишины.
-
-📅 *Когда?* 29–31 мая 2026 (3 дня)
-
-👭 *Для кого?* Для женщин, которые чувствуют усталость, хотят остановиться и вернуть себе целостность.
-
-🌟 *Что вас ждёт?*
-
-• 🧘‍♀️ Инь и Янь йога — мягкие и динамичные практики
-• 💃 Сакральный танец — танец души без правил
-• 🔥 Гвоздестояние — работа со страхами
-• 🧖‍♀️ Банные ритуалы — очищение тела и духа
-• ☯️ Мандала выбора цвета — ритуал для понимания своей энергии
-• 🌳 Работа с родом — освобождение от сценариев
+📍 *Место:* Загородный коттедж в Могилёвской области
+📅 *Даты:* 29–31 мая 2026
+👭 *Формат:* до 12 человек
 
 💰 *Стоимость:* 600 BYN (всё включено)
-💳 *Для бронирования:* предоплата 200 BYN
+💳 *Предоплата:* 200 BYN
 
-📞 *Запись и вопросы:* @${ORGANIZER_TG}
+🌟 *Программа:*
+• 🧘‍♀️ Инь и Янь йога
+• 💃 Сакральный танец
+• 🔥 Гвоздестояние
+• 🧖‍♀️ Банные ритуалы
+• ☯️ Мандала выбора цвета
+• 🌳 Работа с родом
 
-🌸 *Осталось всего 12 мест!*
+📞 @${ORGANIZER_TG}
 
-👇 *Хочешь посмотреть программу по дням?*`,
+👇 *Программа по дням:*`,
             {
                 parse_mode: 'Markdown',
                 reply_markup: {
                     inline_keyboard: [
-                        [{ text: '🌙 День 1 (29 мая)', callback_data: 'day1' }],
-                        [{ text: '☀️ День 2 (30 мая)', callback_data: 'day2' }],
-                        [{ text: '🌸 День 3 (31 мая)', callback_data: 'day3' }],
+                        [{ text: '🌙 День 1', callback_data: 'day1' }, { text: '☀️ День 2', callback_data: 'day2' }, { text: '🌸 День 3', callback_data: 'day3' }],
                         [{ text: '📞 Записаться', callback_data: 'register' }],
                         [{ text: '🔙 Главное меню', callback_data: 'main_menu' }]
                     ]
@@ -202,15 +202,15 @@ bot.on('callback_query', async (query) => {
         return;
     }
     
-    // Программа по дням
+    // 3. ДНИ ПРОГРАММЫ
     if (data === 'day1') {
         bot.sendMessage(chatId,
-            `🌙 *День 1 — Встреча и выбор цвета*
+            `🌙 *День 1 — 29 мая*
 
 14:00 — Заезд, расселение
 15:00 — Обед
-16:00 — «Первая тишина» — знакомство
-17:00 — «Зеркало круга» — знакомство в кругу
+16:00 — «Первая тишина»
+17:00 — «Зеркало круга»
 18:00 — «Выбор цвета» — мандала
 19:00 — Сакральный танец
 20:00 — Ужин
@@ -223,14 +223,14 @@ bot.on('callback_query', async (query) => {
     
     if (data === 'day2') {
         bot.sendMessage(chatId,
-            `☀️ *День 2 — Погружение*
+            `☀️ *День 2 — 30 мая*
 
 08:00 — Инь-йога
 09:30 — Завтрак
-11:00 — «Река течёт» — образ застоев
+11:00 — «Река течёт»
 13:00 — Обед
-15:00 — «Узел рода» — работа с родом
-17:00 — «Лицом к страху» — встреча со страхом
+15:00 — «Узел рода»
+17:00 — «Лицом к страху»
 19:00 — Ужин
 20:00 — Баня`,
             { parse_mode: 'Markdown' }
@@ -241,11 +241,11 @@ bot.on('callback_query', async (query) => {
     
     if (data === 'day3') {
         bot.sendMessage(chatId,
-            `🌸 *День 3 — Интеграция*
+            `🌸 *День 3 — 31 мая*
 
 08:00 — Янь-йога
 09:30 — Завтрак
-11:00 — «Переворот» — от страха к силе
+11:00 — «Переворот»
 13:00 — «Второй цвет» — символ баланса
 14:00 — Круг закрытия
 15:00 — Обед и отъезд`,
@@ -255,30 +255,53 @@ bot.on('callback_query', async (query) => {
         return;
     }
     
+    // 4. ЗАПИСАТЬСЯ
     if (data === 'register') {
         bot.sendMessage(chatId,
             `✨ *Запись на ретрит*
 
-💰 *Полная стоимость:* 600 BYN
-💳 *Предоплата:* 200 BYN для бронирования места
+💰 600 BYN (предоплата 200 BYN)
 
 📞 Свяжитесь с организатором: @${ORGANIZER_TG}
 📞 Или позвоните: ${ORGANIZER_PHONE}
+🌐 Или на сайте: ${SITE_URL}
 
-🌐 Или заполните форму на сайте: ${SITE_URL}
-
-🌸 *Осталось всего 12 мест!*`,
+🌸 *Осталось 12 мест!*`,
             { parse_mode: 'Markdown' }
         );
         bot.answerCallbackQuery(query.id);
         return;
     }
     
+    // 5. ГЛАВНОЕ МЕНЮ
     if (data === 'main_menu') {
         bot.sendMessage(chatId, `Главное меню:`, mainMenu);
         bot.answerCallbackQuery(query.id);
         return;
     }
+    
+    // 6. ТЕСТ (если нужно)
+    if (data === 'test_yan' || data === 'test_yin') {
+        const user = testUsers[chatId];
+        if (user && user.step < 3) {
+            user.answers.push(data);
+            user.step++;
+            if (user.step < 3) {
+                askTestQuestion(chatId, user.step);
+            } else {
+                const yinCount = user.answers.filter(a => a === 'test_yin').length;
+                const result = yinCount >= 2 ? '🌙 Инь · Принятие' : '☀️ Янь · Действие';
+                bot.sendMessage(chatId, `✨ *Твой баланс:* ${result}\n\n🎁 Нажми "🎁 Получить подарок"!`, { parse_mode: 'Markdown', ...mainMenu });
+                delete testUsers[chatId];
+            }
+        }
+        bot.answerCallbackQuery(query.id);
+        return;
+    }
+    
+    // Если ничего не подошло
+    console.log('Неизвестный callback:', data);
+    bot.answerCallbackQuery(query.id, { text: 'Действие не распознано' });
 });
 
 // ===== ОСТАЛЬНЫЕ КОМАНДЫ =====
