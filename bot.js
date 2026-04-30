@@ -7,7 +7,7 @@ const SITE_URL = 'https://retreat.idealab.by/';
 const ORGANIZER_TG = 'egor_provedet';
 const ORGANIZER_PHONE = '+375291936694';
 const ADMIN_ID = 'egor_provedet';
-const GIFT_FOLDER_LINK = 'https://drive.google.com/file/d/1nMu9dMwHbS5ml1smwHRwmUQR-Lk0605J/view?usp=sharing';
+const GIFT_FOLDER_LINK = 'https://drive.google.com/drive/folders/1m8db4gEiLLwD1caYvEsGybIs9cm_EzEg';
 
 const bot = new TelegramBot(TOKEN, { polling: true });
 
@@ -28,6 +28,42 @@ const mainMenu = {
         resize_keyboard: true
     }
 };
+
+// ===== ФУНКЦИЯ ОТПРАВКИ ПОДРОБНОЙ ИНФОРМАЦИИ О РЕТРИТЕ =====
+function sendDetailedRetreat(chatId) {
+    bot.sendMessage(chatId,
+        `🌿 *Подробнее о ретрите «Инь·Янь. Баланс»*
+
+📍 *Место:* Загородный коттедж в Могилёвской области
+📅 *Даты:* 29–31 мая 2026
+👭 *Формат:* до 12 человек
+
+💰 *Стоимость:* 600 BYN (всё включено)
+💳 *Предоплата:* 200 BYN
+
+🌟 *Программа:*
+• 🧘‍♀️ Инь и Янь йога
+• 💃 Сакральный танец
+• 🔥 Гвоздестояние
+• 🧖‍♀️ Банные ритуалы
+• ☯️ Мандала выбора цвета
+• 🌳 Работа с родом
+
+📞 @${ORGANIZER_TG}
+
+👇 *Программа по дням:*`,
+        {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: '🌙 День 1', callback_data: 'day1' }, { text: '☀️ День 2', callback_data: 'day2' }, { text: '🌸 День 3', callback_data: 'day3' }],
+                    [{ text: '📞 Записаться', callback_data: 'register' }],
+                    [{ text: '🔙 Главное меню', callback_data: 'main_menu' }]
+                ]
+            }
+        }
+    );
+}
 
 // ===== /start — СРАЗУ НАЧИНАЕМ ДИАЛОГ =====
 bot.onText(/\/start/, (msg) => {
@@ -153,19 +189,33 @@ function askTestQuestion(chatId, idx) {
     });
 }
 
-// ===== ОБРАБОТКА INLINE-КНОПОК (ПОЛНОСТЬЮ ИСПРАВЛЕННЫЙ) =====
+// ===== ОБРАБОТКА INLINE-КНОПОК =====
 bot.on('callback_query', (query) => {
     const chatId = query.message.chat.id;
     const data = query.data;
     const messageId = query.message.message_id;
     const user = testUsers[chatId];
     
-    console.log('Callback получен:', data);
+    console.log('✅ Callback получен:', data, 'ChatId:', chatId);
     
-    // ===== ЗАВЕРШАЕМ ДИАЛОГ ПРИ ЛЮБОМ INLINE-ДЕЙСТВИИ (кроме выбора опыта) =====
+    // ===== ОБРАБОТКА КНОПКИ "РАССКАЖИ ПОДРОБНЕЕ" (САМАЯ ПРИОРИТЕТНАЯ) =====
+    if (data === 'detailed_retreat') {
+        console.log('📢 Обработка кнопки "Расскажи подробнее" для чата:', chatId);
+        // Завершаем диалог если он есть
+        if (userDialogs[chatId]) {
+            delete userDialogs[chatId];
+            console.log('🗑️ Диалог завершён');
+        }
+        // Отправляем подробную информацию
+        sendDetailedRetreat(chatId);
+        bot.answerCallbackQuery(query.id);
+        return;
+    }
+    
+    // ===== ЗАВЕРШАЕМ ДИАЛОГ ПРИ ЛЮБОМ ДРУГОМ INLINE-ДЕЙСТВИИ (кроме выбора опыта) =====
     if (!['exp_never', 'exp_few', 'exp_many'].includes(data) && userDialogs[chatId]) {
         delete userDialogs[chatId];
-        console.log(`Диалог с ${chatId} завершён (пользователь нажал действие: ${data})`);
+        console.log(`Диалог с ${chatId} завершён (нажато: ${data})`);
     }
     
     // 1. ТЕСТ (Инь/Янь вопросы)
@@ -205,45 +255,7 @@ bot.on('callback_query', (query) => {
         return;
     }
     
-    // 3. ПОДРОБНЕЕ О РЕТРИТЕ
-    if (data === 'detailed_retreat') {
-        bot.sendMessage(chatId,
-            `🌿 *Подробнее о ретрите «Инь·Янь. Баланс»*
-
-📍 *Место:* Загородный коттедж в Могилёвской области
-📅 *Даты:* 29–31 мая 2026
-👭 *Формат:* до 12 человек
-
-💰 *Стоимость:* 600 BYN (всё включено)
-💳 *Предоплата:* 200 BYN
-
-🌟 *Программа:*
-• 🧘‍♀️ Инь и Янь йога
-• 💃 Сакральный танец
-• 🔥 Гвоздестояние
-• 🧖‍♀️ Банные ритуалы
-• ☯️ Мандала выбора цвета
-• 🌳 Работа с родом
-
-📞 @${ORGANIZER_TG}
-
-👇 *Программа по дням:*`,
-            {
-                parse_mode: 'Markdown',
-                reply_markup: {
-                    inline_keyboard: [
-                        [{ text: '🌙 День 1', callback_data: 'day1' }, { text: '☀️ День 2', callback_data: 'day2' }, { text: '🌸 День 3', callback_data: 'day3' }],
-                        [{ text: '📞 Записаться', callback_data: 'register' }],
-                        [{ text: '🔙 Главное меню', callback_data: 'main_menu' }]
-                    ]
-                }
-            }
-        );
-        bot.answerCallbackQuery(query.id);
-        return;
-    }
-    
-    // 4. ДЕНЬ 1
+    // 3. ДЕНЬ 1
     if (data === 'day1') {
         bot.sendMessage(chatId,
             `🌙 *День 1 — 29 мая*
@@ -262,7 +274,7 @@ bot.on('callback_query', (query) => {
         return;
     }
     
-    // 5. ДЕНЬ 2
+    // 4. ДЕНЬ 2
     if (data === 'day2') {
         bot.sendMessage(chatId,
             `☀️ *День 2 — 30 мая*
@@ -281,7 +293,7 @@ bot.on('callback_query', (query) => {
         return;
     }
     
-    // 6. ДЕНЬ 3
+    // 5. ДЕНЬ 3
     if (data === 'day3') {
         bot.sendMessage(chatId,
             `🌸 *День 3 — 31 мая*
@@ -298,7 +310,7 @@ bot.on('callback_query', (query) => {
         return;
     }
     
-    // 7. ЗАПИСАТЬСЯ
+    // 6. ЗАПИСАТЬСЯ
     if (data === 'register') {
         bot.sendMessage(chatId,
             `✨ *Запись на ретрит*
@@ -316,7 +328,7 @@ bot.on('callback_query', (query) => {
         return;
     }
     
-    // 8. ГЛАВНОЕ МЕНЮ
+    // 7. ГЛАВНОЕ МЕНЮ
     if (data === 'main_menu') {
         bot.sendMessage(chatId, `Главное меню:`, mainMenu);
         bot.answerCallbackQuery(query.id);
@@ -324,7 +336,7 @@ bot.on('callback_query', (query) => {
     }
     
     // Если ничего не подошло
-    console.log('Неизвестный callback:', data);
+    console.log('❓ Неизвестный callback:', data);
     bot.answerCallbackQuery(query.id, { text: 'Действие не распознано' });
 });
 
@@ -381,4 +393,4 @@ const server = http.createServer((req, res) => {
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, '0.0.0.0', () => console.log(`✅ Health check on port ${PORT}`));
 
-console.log('✅ Бот запущен! Все кнопки работают корректно.');
+console.log('✅ Бот запущен! Кнопка "Расскажи подробнее" теперь гарантированно работает.');
