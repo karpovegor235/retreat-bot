@@ -7,7 +7,7 @@ const SITE_URL = 'https://retreat.idealab.by/';
 const ORGANIZER_TG = 'egor_provedet';
 const ORGANIZER_PHONE = '+375291936694';
 const ADMIN_ID = 'egor_provedet';
-const GIFT_FOLDER_LINK = 'https://drive.google.com/drive/folders/1m8db4gEiLLwD1caYvEsGybIs9cm_EzEg';
+const GIFT_FOLDER_LINK = 'https://drive.google.com/file/d/1nMu9dMwHbS5ml1smwHRwmUQR-Lk0605J/view?usp=sharing';
 
 const bot = new TelegramBot(TOKEN, { polling: true });
 
@@ -31,6 +31,7 @@ const mainMenu = {
 
 // ===== ФУНКЦИЯ ОТПРАВКИ ПОДРОБНОЙ ИНФОРМАЦИИ О РЕТРИТЕ =====
 function sendDetailedRetreat(chatId) {
+    console.log('📤 Отправка подробной информации о ретрите в чат:', chatId);
     bot.sendMessage(chatId,
         `🌿 *Подробнее о ретрите «Инь·Янь. Баланс»*
 
@@ -62,12 +63,17 @@ function sendDetailedRetreat(chatId) {
                 ]
             }
         }
-    );
+    ).then(() => {
+        console.log('✅ Сообщение о ретрите отправлено в чат:', chatId);
+    }).catch(err => {
+        console.error('❌ Ошибка при отправке сообщения о ретрите:', err);
+    });
 }
 
-// ===== /start — СРАЗУ НАЧИНАЕМ ДИАЛОГ =====
+// ===== /start =====
 bot.onText(/\/start/, (msg) => {
     const chatId = msg.chat.id;
+    console.log('🚀 /start от пользователя:', chatId, msg.from.first_name);
     userDialogs[chatId] = { step: 'name', data: {} };
     
     bot.sendMessage(chatId,
@@ -76,11 +82,13 @@ bot.onText(/\/start/, (msg) => {
     );
 });
 
-// ===== ОБРАБОТКА ДИАЛОГА =====
+// ===== ОБРАБОТКА ВСЕХ СООБЩЕНИЙ =====
 bot.on('message', (msg) => {
     const chatId = msg.chat.id;
     const dialog = userDialogs[chatId];
     const text = msg.text;
+    
+    console.log('📨 Получено сообщение от', chatId, ':', text);
     
     if (!dialog) return;
     
@@ -189,53 +197,36 @@ function askTestQuestion(chatId, idx) {
     });
 }
 
-// ===== ОБРАБОТКА INLINE-КНОПОК =====
+// ===== ОБРАБОТКА ВСЕХ CALLBACK ЗАПРОСОВ =====
 bot.on('callback_query', (query) => {
     const chatId = query.message.chat.id;
     const data = query.data;
     const messageId = query.message.message_id;
     const user = testUsers[chatId];
     
-    console.log('✅ Callback получен:', data, 'ChatId:', chatId);
+    console.log('🔔 CALLBACK ПОЛУЧЕН! data:', data, 'chatId:', chatId);
     
-    // ===== ОБРАБОТКА КНОПКИ "РАССКАЖИ ПОДРОБНЕЕ" (САМАЯ ПРИОРИТЕТНАЯ) =====
+    // ПРОВЕРКА: обрабатываем ТОЛЬКО кнопку detailed_retreat
     if (data === 'detailed_retreat') {
-        console.log('📢 Обработка кнопки "Расскажи подробнее" для чата:', chatId);
+        console.log('🎯 НАЖАТА КНОПКА "РАССКАЖИ ПОДРОБНЕЕ" для чата:', chatId);
+        
         // Завершаем диалог если он есть
         if (userDialogs[chatId]) {
             delete userDialogs[chatId];
             console.log('🗑️ Диалог завершён');
         }
+        
         // Отправляем подробную информацию
         sendDetailedRetreat(chatId);
+        
+        // Отвечаем на callback (уберет "часики" на кнопке)
         bot.answerCallbackQuery(query.id);
         return;
     }
     
-    // ===== ЗАВЕРШАЕМ ДИАЛОГ ПРИ ЛЮБОМ ДРУГОМ INLINE-ДЕЙСТВИИ (кроме выбора опыта) =====
-    if (!['exp_never', 'exp_few', 'exp_many'].includes(data) && userDialogs[chatId]) {
-        delete userDialogs[chatId];
-        console.log(`Диалог с ${chatId} завершён (нажато: ${data})`);
-    }
-    
-    // 1. ТЕСТ (Инь/Янь вопросы)
-    if ((data === 'test_yan' || data === 'test_yin') && user && user.step < 3) {
-        user.answers.push(data);
-        user.step++;
-        if (user.step < 3) {
-            askTestQuestion(chatId, user.step);
-        } else {
-            const yinCount = user.answers.filter(a => a === 'test_yin').length;
-            const result = yinCount >= 2 ? '🌙 Инь · Принятие' : '☀️ Янь · Действие';
-            bot.sendMessage(chatId, `✨ *Твой баланс:* ${result}\n\n🎁 Нажми "🎁 Получить подарок"!`, { parse_mode: 'Markdown', ...mainMenu });
-            delete testUsers[chatId];
-        }
-        bot.answerCallbackQuery(query.id);
-        return;
-    }
-    
-    // 2. ВЫБОР ОПЫТА В ДИАЛОГЕ
+    // Остальная обработка других кнопок...
     if (data === 'exp_never' || data === 'exp_few' || data === 'exp_many') {
+        console.log('📝 Выбор опыта:', data);
         const expMap = {
             'exp_never': '✨ Никогда, но хочу попробовать',
             'exp_few': '🌱 Был 1-2 раза',
@@ -255,96 +246,69 @@ bot.on('callback_query', (query) => {
         return;
     }
     
-    // 3. ДЕНЬ 1
     if (data === 'day1') {
-        bot.sendMessage(chatId,
-            `🌙 *День 1 — 29 мая*
-
-14:00 — Заезд, расселение
-15:00 — Обед
-16:00 — «Первая тишина»
-17:00 — «Зеркало круга»
-18:00 — «Выбор цвета» — мандала
-19:00 — Сакральный танец
-20:00 — Ужин
-21:00 — Вечерняя тишина`,
-            { parse_mode: 'Markdown' }
-        );
+        console.log('📅 День 1');
+        bot.sendMessage(chatId, `🌙 *День 1 — 29 мая*\n\n14:00 — Заезд, расселение\n15:00 — Обед\n16:00 — «Первая тишина»\n17:00 — «Зеркало круга»\n18:00 — «Выбор цвета» — мандала\n19:00 — Сакральный танец\n20:00 — Ужин\n21:00 — Вечерняя тишина`, { parse_mode: 'Markdown' });
         bot.answerCallbackQuery(query.id);
         return;
     }
     
-    // 4. ДЕНЬ 2
     if (data === 'day2') {
-        bot.sendMessage(chatId,
-            `☀️ *День 2 — 30 мая*
-
-08:00 — Инь-йога
-09:30 — Завтрак
-11:00 — «Река течёт»
-13:00 — Обед
-15:00 — «Узел рода»
-17:00 — «Лицом к страху»
-19:00 — Ужин
-20:00 — Баня`,
-            { parse_mode: 'Markdown' }
-        );
+        console.log('📅 День 2');
+        bot.sendMessage(chatId, `☀️ *День 2 — 30 мая*\n\n08:00 — Инь-йога\n09:30 — Завтрак\n11:00 — «Река течёт»\n13:00 — Обед\n15:00 — «Узел рода»\n17:00 — «Лицом к страху»\n19:00 — Ужин\n20:00 — Баня`, { parse_mode: 'Markdown' });
         bot.answerCallbackQuery(query.id);
         return;
     }
     
-    // 5. ДЕНЬ 3
     if (data === 'day3') {
-        bot.sendMessage(chatId,
-            `🌸 *День 3 — 31 мая*
-
-08:00 — Янь-йога
-09:30 — Завтрак
-11:00 — «Переворот»
-13:00 — «Второй цвет» — символ баланса
-14:00 — Круг закрытия
-15:00 — Обед и отъезд`,
-            { parse_mode: 'Markdown' }
-        );
+        console.log('📅 День 3');
+        bot.sendMessage(chatId, `🌸 *День 3 — 31 мая*\n\n08:00 — Янь-йога\n09:30 — Завтрак\n11:00 — «Переворот»\n13:00 — «Второй цвет» — символ баланса\n14:00 — Круг закрытия\n15:00 — Обед и отъезд`, { parse_mode: 'Markdown' });
         bot.answerCallbackQuery(query.id);
         return;
     }
     
-    // 6. ЗАПИСАТЬСЯ
     if (data === 'register') {
-        bot.sendMessage(chatId,
-            `✨ *Запись на ретрит*
-
-💰 600 BYN (предоплата 200 BYN)
-
-📞 Свяжитесь с организатором: @${ORGANIZER_TG}
-📞 Или позвоните: ${ORGANIZER_PHONE}
-🌐 Или на сайте: ${SITE_URL}
-
-🌸 *Осталось 12 мест!*`,
-            { parse_mode: 'Markdown' }
-        );
+        console.log('📞 Запись');
+        bot.sendMessage(chatId, `✨ *Запись на ретрит*\n\n💰 600 BYN (предоплата 200 BYN)\n\n📞 Свяжитесь с организатором: @${ORGANIZER_TG}\n📞 Или позвоните: ${ORGANIZER_PHONE}\n🌐 Или на сайте: ${SITE_URL}\n\n🌸 *Осталось 12 мест!*`, { parse_mode: 'Markdown' });
         bot.answerCallbackQuery(query.id);
         return;
     }
     
-    // 7. ГЛАВНОЕ МЕНЮ
     if (data === 'main_menu') {
+        console.log('🏠 Главное меню');
         bot.sendMessage(chatId, `Главное меню:`, mainMenu);
         bot.answerCallbackQuery(query.id);
         return;
     }
     
-    // Если ничего не подошло
-    console.log('❓ Неизвестный callback:', data);
+    if ((data === 'test_yan' || data === 'test_yin') && user && user.step < 3) {
+        console.log('🧪 Тест:', data);
+        user.answers.push(data);
+        user.step++;
+        if (user.step < 3) {
+            askTestQuestion(chatId, user.step);
+        } else {
+            const yinCount = user.answers.filter(a => a === 'test_yin').length;
+            const result = yinCount >= 2 ? '🌙 Инь · Принятие' : '☀️ Янь · Действие';
+            bot.sendMessage(chatId, `✨ *Твой баланс:* ${result}\n\n🎁 Нажми "🎁 Получить подарок"!`, { parse_mode: 'Markdown', ...mainMenu });
+            delete testUsers[chatId];
+        }
+        bot.answerCallbackQuery(query.id);
+        return;
+    }
+    
+    console.log('❌ НЕИЗВЕСТНЫЙ CALLBACK:', data);
     bot.answerCallbackQuery(query.id, { text: 'Действие не распознано' });
 });
 
-// ===== ОСТАЛЬНЫЕ КОМАНДЫ (КНОПКИ ГЛАВНОГО МЕНЮ) =====
-
-bot.onText(/🎴 Пройти тест/, (msg) => startTest(msg.chat.id));
+// ===== ОСТАЛЬНЫЕ КОМАНДЫ =====
+bot.onText(/🎴 Пройти тест/, (msg) => {
+    console.log('🎴 Запуск теста для:', msg.chat.id);
+    startTest(msg.chat.id);
+});
 
 bot.onText(/🎁 Получить подарок/, (msg) => {
+    console.log('🎁 Отправка подарка для:', msg.chat.id);
     bot.sendMessage(msg.chat.id,
         `🎁 *${msg.from.first_name}, вот твой подарок!*\n\n👉 [Скачать 2 практики](${GIFT_FOLDER_LINK})\n\n🌙 Инь-практика — расслабление\n☀️ Янь-практика — энергия`,
         { parse_mode: 'Markdown' }
@@ -352,6 +316,7 @@ bot.onText(/🎁 Получить подарок/, (msg) => {
 });
 
 bot.onText(/🌿 О ретрите/, (msg) => {
+    console.log('🌿 О ретрите для:', msg.chat.id);
     bot.sendMessage(msg.chat.id,
         `🌿 *Ретрит «Инь·Янь. Баланс»*\n\n📅 29–31 мая 2026\n📍 Могилёвская область\n💰 *Стоимость:* 600 BYN (всё включено)\n💳 *Предоплата:* 200 BYN для бронирования\n\n📞 ${ORGANIZER_PHONE}`,
         { parse_mode: 'Markdown' }
@@ -359,6 +324,7 @@ bot.onText(/🌿 О ретрите/, (msg) => {
 });
 
 bot.onText(/❓ FAQ/, (msg) => {
+    console.log('❓ FAQ для:', msg.chat.id);
     bot.sendMessage(msg.chat.id,
         `❓ *Частые вопросы*\n\n1️⃣ *Нужен опыт?* Нет, практики для любого уровня.\n2️⃣ *Что взять?* Удобную одежду, купальник, тапки.\n3️⃣ *Телефоны?* Сдаются на входе — полное погружение.\n4️⃣ *Можно с подругой?* Да, можно в одной комнате.\n5️⃣ *Как оплатить?* Предоплата 200 BYN для бронирования. Остаток 400 BYN при заезде.\n6️⃣ *Трансфер?* Да, из Минска туда и обратно.\n\n📞 ${ORGANIZER_PHONE}`,
         { parse_mode: 'Markdown' }
@@ -366,6 +332,7 @@ bot.onText(/❓ FAQ/, (msg) => {
 });
 
 bot.onText(/📞 Контакты/, (msg) => {
+    console.log('📞 Контакты для:', msg.chat.id);
     bot.sendMessage(msg.chat.id,
         `📞 *Контакты*\n\n📱 @${ORGANIZER_TG}\n📞 ${ORGANIZER_PHONE}\n🌐 ${SITE_URL}`,
         { parse_mode: 'Markdown' }
@@ -373,16 +340,10 @@ bot.onText(/📞 Контакты/, (msg) => {
 });
 
 bot.onText(/🌐 Сайт/, (msg) => {
+    console.log('🌐 Сайт для:', msg.chat.id);
     bot.sendMessage(msg.chat.id, `🌐 ${SITE_URL}`, {
         reply_markup: { inline_keyboard: [[{ text: 'Открыть сайт', url: SITE_URL }]] }
     });
-});
-
-bot.onText(/Хочу на ретрит/i, (msg) => {
-    bot.sendMessage(msg.chat.id, 
-        `✨ Отлично!\n\n💰 Стоимость: 600 BYN\n💳 Предоплата: 200 BYN\n\n📞 Свяжись: @${ORGANIZER_TG} или ${ORGANIZER_PHONE}`,
-        { parse_mode: 'Markdown' }
-    );
 });
 
 // ===== HEALTH CHECK СЕРВЕР =====
@@ -393,4 +354,4 @@ const server = http.createServer((req, res) => {
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, '0.0.0.0', () => console.log(`✅ Health check on port ${PORT}`));
 
-console.log('✅ Бот запущен! Кнопка "Расскажи подробнее" теперь гарантированно работает.');
+console.log('✅ Бот запущен! Смотрите консоль для отладки.');
