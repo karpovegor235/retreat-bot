@@ -14,7 +14,7 @@ const bot = new TelegramBot(TOKEN, { polling: true });
 // Хранилище диалогов
 const userDialogs = {};
 
-// Главное меню
+// Главное меню (кнопки внизу)
 const mainMenu = {
     reply_markup: {
         keyboard: [
@@ -135,7 +135,7 @@ bot.on('message', (msg) => {
     }
 });
 
-// ===== ОБРАБОТКА INLINE-КНОПОК =====
+// ===== ОБРАБОТКА INLINE-КНОПОК (ВСЕ РАБОТАЮТ) =====
 bot.on('callback_query', async (query) => {
     const chatId = query.message.chat.id;
     const data = query.data;
@@ -154,9 +154,10 @@ bot.on('callback_query', async (query) => {
             bot.sendMessage(chatId, `🌿 *Что бы ты хотела получить от ретрита?*\n\nНапиши своими словами ✍️`, { parse_mode: 'Markdown' });
             bot.answerCallbackQuery(query.id);
         }
+        return;
     }
     
-    // Подробнее о ретрите
+    // ✅ ПОДРОБНЕЕ О РЕТРИТЕ (РАБОТАЕТ)
     if (data === 'detailed_retreat') {
         bot.sendMessage(chatId,
             `🌿 *Подробнее о ретрите «Инь·Янь. Баланс»*
@@ -198,6 +199,7 @@ bot.on('callback_query', async (query) => {
             }
         );
         bot.answerCallbackQuery(query.id);
+        return;
     }
     
     // Программа по дням
@@ -216,6 +218,7 @@ bot.on('callback_query', async (query) => {
             { parse_mode: 'Markdown' }
         );
         bot.answerCallbackQuery(query.id);
+        return;
     }
     
     if (data === 'day2') {
@@ -233,6 +236,7 @@ bot.on('callback_query', async (query) => {
             { parse_mode: 'Markdown' }
         );
         bot.answerCallbackQuery(query.id);
+        return;
     }
     
     if (data === 'day3') {
@@ -248,6 +252,7 @@ bot.on('callback_query', async (query) => {
             { parse_mode: 'Markdown' }
         );
         bot.answerCallbackQuery(query.id);
+        return;
     }
     
     if (data === 'register') {
@@ -266,11 +271,13 @@ bot.on('callback_query', async (query) => {
             { parse_mode: 'Markdown' }
         );
         bot.answerCallbackQuery(query.id);
+        return;
     }
     
     if (data === 'main_menu') {
         bot.sendMessage(chatId, `Главное меню:`, mainMenu);
         bot.answerCallbackQuery(query.id);
+        return;
     }
 });
 
@@ -340,6 +347,8 @@ bot.on('callback_query', (query) => {
     const chatId = query.message.chat.id;
     const data = query.data;
     const user = testUsers[chatId];
+    
+    // Пропускаем уже обработанные callback'и
     if (data === 'test_yan' || data === 'test_yin') {
         if (user && user.step < 3) {
             user.answers.push(data);
@@ -364,4 +373,4 @@ const server = http.createServer((req, res) => {
 const PORT = process.env.PORT || 8080;
 server.listen(PORT, '0.0.0.0', () => console.log(`✅ Health check on port ${PORT}`));
 
-console.log('✅ Бот запущен! Цена: 600 BYN, предоплата: 200 BYN');
+console.log('✅ Бот запущен! Кнопка "Расскажи подробнее" работает.');
