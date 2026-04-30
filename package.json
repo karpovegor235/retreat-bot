@@ -1,0 +1,8 @@
+{
+  "name": "retreat-bot",
+  "version": "1.0.0",
+  "main": "bot.js",
+  "dependencies": {
+    "node-telegram-bot-api": "^0.66.0"
+  }
+}
