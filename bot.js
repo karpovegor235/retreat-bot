@@ -351,12 +351,23 @@ function checkReminders() {
 setInterval(checkReminders, 1000 * 60 * 60 * 6);
 
 // ===== /start =====
-bot.onText(/\/start/, (msg) => {
+bot.onText(/\/start(?: ref_(.+))?/, (msg, match) => {
     const chatId = msg.chat.id;
+    const referrerId = match[1];
+    
     updateStats('start');
     saveUser(chatId, { name: msg.from.first_name });
-    userDialogs[chatId] = { step: 'name', data: {} };
-    bot.sendMessage(chatId, `✨ Привет! Я — *твой помощник* 🤍
+    
+    if (referrerId) {
+        saveUser(chatId, { referredBy: referrerId });
+        bot.sendMessage(chatId, 
+            `🌸 *Привет!* Тебя пригласила подруга!\n\nУ тебя есть скидка 10% на ретрит.\n\nДавай познакомимся? Как тебя зовут?`,
+            { parse_mode: 'Markdown' }
+        );
+        userDialogs[chatId] = { step: 'name', data: { referrerId } };
+    } else {
+        userDialogs[chatId] = { step: 'name', data: {} };
+        bot.sendMessage(chatId, `✨ Привет! Я — *твой помощник* 🤍
 
 Меня зовут Ци. Я Энергия, которая течёт между покоем и действием. На ретрите «Инь·Янь. Баланс» я буду твоим проводником.
 
@@ -505,10 +516,11 @@ bot.on('callback_query', async (query) => {
             reply_markup: {
                 keyboard: [
                     [{ text: '🧘‍♀️ Начать подбор' }],
-                    [{ text: '🎁 Подарок' }, { text: '🌿 О ретрите' }],
-                    [{ text: '❓ FAQ' }, { text: '📞 Контакты' }, { text: '🌐 Сайт' }]
-                ],
-                resize_keyboard: true
+            [{ text: '🎁 Подарок' }, { text: '🌿 О ретрите' }],
+            [{ text: '❓ FAQ' }, { text: '📞 Контакты' }, { text: '🌐 Сайт' }],
+            [{ text: '👭 Пригласить подругу' }]  // 🔥 НОВАЯ КНОПКА
+        ],
+        resize_keyboard: true
             }
         });
         await bot.answerCallbackQuery(query.id);
@@ -718,7 +730,142 @@ bot.onText(/\/zayavki/, (msg) => {
         console.log(e);
     }
 });
+// ===== ПРИГЛАСИТЬ ПОДРУГУ =====
+bot.onText(/👭 Пригласить подругу/, (msg) => {
+    const chatId = msg.chat.id;
+    
+    bot.sendMessage(chatId,
+        `👭 *Пригласи подругу на ретрит*
 
+Если она забронирует место — вы обе получите подарок 🎁
+
+*Как это работает:*
+
+1️⃣ Отправь мне @username подруги
+2️⃣ Я дам тебе ссылку для отправки
+3️⃣ Подруга переходит по ссылке и бронирует место
+4️⃣ Вы обе получаете скидку 10%
+
+✏️ *Напиши @username подруги прямо сейчас:*`,
+        { parse_mode: 'Markdown' }
+    );
+    
+    userDialogs[chatId] = { step: 'invite_friend', data: {} };
+});
+
+// Обработка введённого username подруги
+bot.on('message', async (msg) => {
+    const chatId = msg.chat.id;
+    const text = msg.text;
+    const d = userDialogs[chatId];
+    
+    if (!d || d.step !== 'invite_friend') return;
+    
+    if (!text.startsWith('@')) {
+        bot.sendMessage(chatId, '❌ Пожалуйста, начни с @, например: @anna');
+        delete userDialogs[chatId];
+        return;
+    }
+    
+    const friendUsername = text.replace('@', '');
+    const inviterName = msg.from.first_name;
+    const botUsername = (await bot.getMe()).username;
+    
+    // Сохраняем приглашение
+    let invites = {};
+    try { invites = JSON.parse(fs.readFileSync('invites.json')); } catch(e) {}
+    
+    invites[friendUsername] = {
+        invitedBy: chatId,
+        invitedByName: inviterName,
+        invitedAt: new Date().toISOString(),
+        status: 'pending'
+    };
+    fs.writeFileSync('invites.json', JSON.stringify(invites, null, 2));
+    
+    const inviteLink = `https://t.me/${botUsername}?start=ref_${chatId}`;
+    
+    bot.sendMessage(chatId,
+        `👭 *Отправь ссылку подруге @${friendUsername}*
+
+🌸 Скопируй и отправь ей это сообщение:
+
+———
+${inviterName} приглашает тебя на ретрит и дарит скидку 10%! 👉 ${inviteLink}
+
+После бронирования напиши боту /confirm
+———
+
+✅ Как только подруга перейдёт по ссылке и забронирует место — ты получишь уведомление!`,
+        { parse_mode: 'Markdown', disable_web_page_preview: true }
+    );
+    
+    delete userDialogs[chatId];
+});
+
+// Команда /confirm — подтверждение бронирования подругой
+bot.onText(/\/confirm/, async (msg) => {
+    const chatId = msg.chat.id;
+    const username = msg.from.username;
+    
+    if (!username) {
+        bot.sendMessage(chatId, '❌ У тебя нет username. Установи его в настройках Telegram');
+        return;
+    }
+    
+    let invites = {};
+    try { invites = JSON.parse(fs.readFileSync('invites.json')); } catch(e) {
+        bot.sendMessage(chatId, '❌ Не найдено активных приглашений');
+        return;
+    }
+    
+    const invite = invites[username];
+    if (!invite || invite.status !== 'pending') {
+        bot.sendMessage(chatId, '❌ У тебя нет активных приглашений');
+        return;
+    }
+    
+    invite.status = 'confirmed';
+    invites[username] = invite;
+    fs.writeFileSync('invites.json', JSON.stringify(invites, null, 2));
+    
+    bot.sendMessage(invite.invitedBy, 
+        `🎁 *Подарок!* Твоя подруга @${username} подтвердила бронирование!\n\nВы обе получаете скидку 10% на следующий ретрит.\n\nНапиши организатору @${ORGANIZER_TG} и скажи промокод FRIEND10 🤍`,
+        { parse_mode: 'Markdown' }
+    );
+    
+    bot.sendMessage(chatId,
+        `🎁 *Поздравляю!* Ты подтвердила бронирование по приглашению.\n\nВы обе получаете скидку 10% на следующий ретрит.\n\nНапиши организатору @${ORGANIZER_TG} и скажи промокод FRIEND10 🤍`,
+        { parse_mode: 'Markdown' }
+    );
+});
+
+// Команда /invites — для админа
+bot.onText(/\/invites/, (msg) => {
+    const username = msg.from.username;
+    if (username !== ADMIN_ID && msg.chat.id.toString() !== ADMIN_ID) {
+        return bot.sendMessage(msg.chat.id, '⛔ Только для организатора');
+    }
+    
+    try {
+        const invites = JSON.parse(fs.readFileSync('invites.json'));
+        let text = '👭 *Список приглашений*\n\n';
+        let count = 0;
+        
+        for (const [friend, data] of Object.entries(invites)) {
+            count++;
+            text += `${count}. 👤 Приглашён: @${friend}\n`;
+            text += `   Пригласила: ${data.invitedByName}\n`;
+            text += `   Статус: ${data.status === 'pending' ? '⏳ Ожидает' : '✅ Подтверждено'}\n`;
+            text += `   🕐 ${new Date(data.invitedAt).toLocaleString()}\n\n`;
+        }
+        
+        if (count === 0) text = '📭 Пока нет приглашений';
+        bot.sendMessage(msg.chat.id, text, { parse_mode: 'Markdown' });
+    } catch(e) {
+        bot.sendMessage(msg.chat.id, '📭 Пока нет приглашений');
+    }
+});
 // ===== СЕРВЕР =====
 const server = http.createServer((req, res) => res.end('Bot running'));
 server.listen(8080, () => console.log('✅ Сервер на 8080'));
