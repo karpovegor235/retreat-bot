@@ -388,10 +388,9 @@ bot.onText(/\/start(?: ref_(.+))?/, (msg, match) => {
 • И никакого спама — только забота и поддержка
 
 💬 *Как тебя зовут?* (просто напиши имя)`,
-        { parse_mode: 'Markdown' }
-     { parse_mode: 'Markdown' }
-        );
-    }
+             { parse_mode: 'Markdown' }
+         );
+    }   
 });
 
 // ===== ДИАЛОГ =====
