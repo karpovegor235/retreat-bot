@@ -149,6 +149,7 @@ async function sendFunnyReminder(chatId) {
 }
 
 // ===== МЕНЮ "ЧТО РАССКАЗАТЬ О РЕТРИТЕ" (РАБОТАЮЩИЕ КНОПКИ!) =====
+// ===== МЕНЮ "ЧТО РАССКАЗАТЬ О РЕТРИТЕ" =====
 async function showRetreatMenu(chatId) {
     await bot.sendMessage(chatId, '🌿 *Что тебе рассказать о ретрите?*', {
         parse_mode: 'Markdown',
@@ -164,7 +165,9 @@ async function showRetreatMenu(chatId) {
             ]
         }
     });
-}async function showProgram(chatId) {
+}
+
+async function showProgram(chatId) {
     await bot.sendMessage(chatId,
         `🌙 *ПРОГРАММА РЕТРИТА «ИНЬ·ЯНЬ. БАЛАНС»*
 
@@ -198,7 +201,9 @@ async function showRetreatMenu(chatId) {
 *«Перемены не случаются в голове. Они проживаются через тело, действие и тишину».*
 *Все практики авторские. Никакого насилия над собой. Только забота 🤍*`,
         { parse_mode: 'Markdown' });
-}async function showPrice(chatId) {
+}
+
+async function showPrice(chatId) {
     await bot.sendMessage(chatId,
         `💰 *СТОИМОСТЬ УЧАСТИЯ — 600 BYN*
 
@@ -228,7 +233,9 @@ async function showRetreatMenu(chatId) {
 
 ❗ Всего 12 мест. Группа камерная — важно успеть`,
         { parse_mode: 'Markdown' });
-}async function showPractices(chatId) {
+}
+
+async function showPractices(chatId) {
     await bot.sendMessage(chatId,
         `🧘‍♀️ ЧТО МЫ БУДЕМ ДЕЛАТЬ НА РЕТРИТЕ
 
@@ -254,9 +261,10 @@ async function showRetreatMenu(chatId) {
 🌐 Подробнее о формате: https://retreat.idealab.by
 
 📞 По всем вопросам: @${ORGANIZER_TG}`,
-        { disable_web_page_preview: true }
-    );
-}async function showFAQ(chatId) {
+        { disable_web_page_preview: true });
+}
+
+async function showFAQ(chatId) {
     await bot.sendMessage(chatId,
         `❓ ЧАСТЫЕ ВОПРОСЫ (FAQ)
 
@@ -293,9 +301,10 @@ async function showRetreatMenu(chatId) {
 🌐 Все ответы и детали: https://retreat.idealab.by
 
 Есть другие вопросы? Напишите @${ORGANIZER_TG}`,
-        { disable_web_page_preview: true }
-    );
-}async function askForPhone(chatId) {
+        { disable_web_page_preview: true });
+}
+
+async function askForPhone(chatId) {
     await bot.sendMessage(chatId, `📞 Отправьте номер телефона (кнопка ниже) или напишите вручную: +375XXXXXXXXX`, {
         reply_markup: {
             keyboard: [[{ text: '📱 Отправить номер', request_contact: true }]],
@@ -304,7 +313,6 @@ async function showRetreatMenu(chatId) {
         }
     });
 }
-
 // ===== НАПОМИНАНИЯ =====
 function getReminderMessage(day, type, name) {
     const map = {
