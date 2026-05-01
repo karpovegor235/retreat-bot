@@ -740,28 +740,22 @@ bot.onText(/\/zayavki/, (msg) => {
     }
 });
 // ===== ПРИГЛАСИТЬ ПОДРУГУ =====
-bot.onText(/👭 Пригласить подругу/, (msg) => {
+bot.onText(/👭 Пригласить подругу/, async (msg) => {
     const chatId = msg.chat.id;
+    const botUsername = (await bot.getMe()).username;
+    const link = `https://t.me/${botUsername}?start=ref_${chatId}`;
     
     bot.sendMessage(chatId,
-        `👭 *Пригласи подругу на ретрит*
+        `👭 *Пригласи подругу*
 
-Если она забронирует место — вы обе получите подарок 🎁
+Отправь ей эту ссылку:
 
-*Как это работает:*
+🔗 ${link}
 
-1️⃣ Отправь мне @username подруги
-2️⃣ Я дам тебе ссылку для отправки
-3️⃣ Подруга переходит по ссылке и бронирует место
-4️⃣ Вы обе получаете скидку 10%
-
-✏️ *Напиши @username подруги прямо сейчас:*`,
-        { parse_mode: 'Markdown' }
+По ссылке подруга получит скидку 10% на ретрит 🤍`,
+        { parse_mode: 'Markdown', disable_web_page_preview: true }
     );
-    
-    userDialogs[chatId] = { step: 'invite_friend', data: {} };
 });
-
 // Обработка введённого username подруги
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
