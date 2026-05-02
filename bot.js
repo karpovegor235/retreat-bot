@@ -3,7 +3,7 @@ const http = require('http');
 const fs = require('fs');
 
 // ===== НАСТРОЙКИ =====
-const TOKEN = '8643652432:AAGfBOTXpcdDz13oK3Ch8HcGB1WzwPJpRjg';
+const TOKEN = '8643652432:AAGJT7ps200NzzDqmf7ZGw5ggnxsvYsyyms';
 const ORGANIZER_TG = 'egor_provedet';
 const ORGANIZER_PHONE = '+375291936694';
 const ADMIN_ID = '490337942';
