@@ -9,6 +9,7 @@ const ORGANIZER_PHONE = '+375291936694';
 const ADMIN_ID = '490337942';
 const GIFT_LINK = 'https://drive.google.com/file/d/1nMu9dMwHbS5ml1smwHRwmUQR-Lk0605J/view';
 const RETREAT_DATE = new Date(2026, 4, 29);
+const SITE_URL = 'http://retreat.idealab.by/';
 
 // Фото места (ID из Google Drive)
 const PHOTOS = [
@@ -17,7 +18,41 @@ const PHOTOS = [
     '1GwcICQaqLs0-tJDLFdW1UYUFJTJC7yRc'
 ];
 
-const bot = new TelegramBot(TOKEN, { polling: true });
+// Функция для создания бота с автоматическим перезапуском
+let bot;
+let pollingTimeout;
+
+function createBot() {
+    if (bot) {
+        try {
+            bot.stopPolling();
+        } catch(e) {}
+    }
+    
+    bot = new TelegramBot(TOKEN, { polling: true });
+    
+    bot.on('polling_error', (error) => {
+        console.log('❌ Ошибка polling:', error.code, error.message);
+        
+        if (error.code === 'ETELEGRAM' && error.message.includes('409 Conflict')) {
+            console.log('🔄 Обнаружен конфликт! Перезапуск бота через 5 секунд...');
+            setTimeout(() => {
+                console.log('🚀 Перезапуск бота...');
+                createBot();
+            }, 5000);
+        }
+    });
+    
+    bot.on('error', (error) => {
+        console.log('❌ Ошибка бота:', error);
+    });
+    
+    console.log('✅ Бот создан и подключён');
+    return bot;
+}
+
+bot = createBot();
+
 const userDialogs = {};
 const testAnswers = {};
 
@@ -130,26 +165,48 @@ async function sendPersonalizedAdvice(chatId, type, name) {
     
     await bot.sendMessage(chatId, message);
 }
-// ===== ШУТКИ ПРИ ИГНОРЕ =====
-const funnyReminders = [
-    "😏 Я вижу, ты меня игнорируешь... Но подарок всё ещё ждёт!",
-    "🦥 Привет! Я без напряга, просто напоминаю о себе 🌿",
-    "🎈 Тук-тук! Не забыла про практику?"
-];
-async function sendFunnyReminder(chatId) {
-    const randomIndex = Math.floor(Math.random() * funnyReminders.length);
-    await bot.sendMessage(chatId, funnyReminders[randomIndex] + '\n\nХочешь получать заботливые напоминания?', {
+
+// ===== ПОЯСНЕНИЕ ПЕРЕД ТЕСТОМ =====
+async function showTestExplanation(chatId) {
+    await bot.sendMessage(chatId, 
+        `🌓 *ЧТО ТЕБЕ ДАСТ ТЕСТ «ИНЬ·ЯНЬ»*
+
+Этот тест поможет:
+• Увидеть твой текущий баланс энергии
+• Понять, чего тебе не хватает прямо сейчас
+• Получить персональные рекомендации
+• Получить 2 практики в подарок (расслабление + энергия)
+
+📋 *3 простых вопроса* — честные ответы
+
+Начать?`,
+        {
+            parse_mode: 'Markdown',
+            reply_markup: {
+                inline_keyboard: [
+                    [{ text: '🌓 НАЧАТЬ ТЕСТ', callback_data: 'start_test_real' }],
+                    [{ text: '🔙 Назад в меню', callback_data: 'show_main_menu' }]
+                ]
+            }
+        }
+    );
+}
+
+// ===== ГЛАВНОЕ МЕНЮ (3 кнопки) =====
+async function showMainMenu(chatId) {
+    await bot.sendMessage(chatId, '🤍 *Что дальше?*\n\nТы можешь пройти тест, получить подарок или узнать о ретрите', {
+        parse_mode: 'Markdown',
         reply_markup: {
             inline_keyboard: [
-                [{ text: '👍 Да, продолжай', callback_data: 'continue_reminders' }],
-                [{ text: '🔕 Отстань', callback_data: 'stop_reminders' }]
+                [{ text: '🌓 ПРОЙТИ ТЕСТ', callback_data: 'start_test' }],
+                [{ text: '🎁 ПОЛУЧИТЬ ПОДАРОК', callback_data: 'get_gift' }],
+                [{ text: '🌿 О РЕТРИТЕ', callback_data: 'show_retreat_menu' }]
             ]
         }
     });
 }
 
-// ===== МЕНЮ "ЧТО РАССКАЗАТЬ О РЕТРИТЕ" (РАБОТАЮЩИЕ КНОПКИ!) =====
-// ===== МЕНЮ "ЧТО РАССКАЗАТЬ О РЕТРИТЕ" =====
+// ===== МЕНЮ РЕТРИТА (повторяется после каждого ответа) =====
 async function showRetreatMenu(chatId) {
     await bot.sendMessage(chatId, '🌿 *Что тебе рассказать о ретрите?*', {
         parse_mode: 'Markdown',
@@ -161,7 +218,7 @@ async function showRetreatMenu(chatId) {
                 [{ text: '🧘‍♀️ Практики', callback_data: 'menu_practices' }],
                 [{ text: '❓ FAQ', callback_data: 'menu_faq' }],
                 [{ text: '💚 ЗАБРОНИРОВАТЬ', callback_data: 'booking' }],
-                [{ text: '🔙 Главное меню', callback_data: 'main_menu' }]
+                [{ text: '🔙 Главное меню', callback_data: 'show_main_menu' }]
             ]
         }
     });
@@ -199,8 +256,11 @@ async function showProgram(chatId) {
 15:00 — Обед и отъезд
 
 *«Перемены не случаются в голове. Они проживаются через тело, действие и тишину».*
-*Все практики авторские. Никакого насилия над собой. Только забота 🤍*`,
-        { parse_mode: 'Markdown' });
+*Все практики авторские. Никакого насилия над собой. Только забота 🤍*
+
+🌐 ${SITE_URL}`,
+        { parse_mode: 'Markdown', disable_web_page_preview: true });
+    await showRetreatMenu(chatId);
 }
 
 async function showPrice(chatId) {
@@ -229,15 +289,16 @@ async function showPrice(chatId) {
 • Свободу в теле
 • Возвращение к себе — цельной и настоящей
 
-🌐 Подробнее о ретрите: https://retreat.idealab.by
+🌐 ${SITE_URL}
 
 ❗ Всего 12 мест. Группа камерная — важно успеть`,
-        { parse_mode: 'Markdown' });
+        { parse_mode: 'Markdown', disable_web_page_preview: true });
+    await showRetreatMenu(chatId);
 }
 
 async function showPractices(chatId) {
     await bot.sendMessage(chatId,
-        `🧘‍♀️ ЧТО МЫ БУДЕМ ДЕЛАТЬ НА РЕТРИТЕ
+        `🧘‍♀️ *ЧТО МЫ БУДЕМ ДЕЛАТЬ НА РЕТРИТЕ*
 
 • Инь-йога — глубокое расслабление, отпускание напряжения
 • Янь-йога — энергия, движение, активация
@@ -250,58 +311,60 @@ async function showPractices(chatId) {
 • Мандала выбора цвета — символ вашего баланса
 • Банные ритуалы + бассейн — очищение тела
 
-"Ретрит — это не про отдых. Это про возвращение к себе".
+*"Ретрит — это не про отдых. Это про возвращение к себе".*
 
-🚗 ТРАНСФЕР ИЗ МИНСКА
+🚗 *ТРАНСФЕР ИЗ МИНСКА*
 Выезд: 29 мая (место посадки сообщим после бронирования)
 Возвращение: 31 мая после обеда, около 17:00
 
 Трансфер включён в стоимость.
 
-🌐 Подробнее о формате: https://retreat.idealab.by
+🌐 ${SITE_URL}
 
 📞 По всем вопросам: @${ORGANIZER_TG}`,
-        { disable_web_page_preview: true });
+        { parse_mode: 'Markdown', disable_web_page_preview: true });
+    await showRetreatMenu(chatId);
 }
 
 async function showFAQ(chatId) {
     await bot.sendMessage(chatId,
-        `❓ ЧАСТЫЕ ВОПРОСЫ (FAQ)
+        `❓ *ЧАСТЫЕ ВОПРОСЫ (FAQ)*
 
-1️⃣ Нужен ли опыт йоги или практик?
+1️⃣ *Нужен ли опыт йоги или практик?*
 Нет. Все практики адаптированы под новичков. Ведущие подстраиваются под группу.
 
-2️⃣ Что взять с собой?
+2️⃣ *Что взять с собой?*
 Удобную одежду для практик, купальник, тёплые носки, сменную обувь.
 
-3️⃣ Телефоны и связь?
+3️⃣ *Телефоны и связь?*
 Телефоны сдаются на входе. Полное погружение в себя. В экстренном случае — телефон организатора.
 
-4️⃣ Можно приехать с подругой?
+4️⃣ *Можно приехать с подругой?*
 Да. Вы сможете жить в одной комнате — укажите это при бронировании.
 
-5️⃣ Как оплатить?
+5️⃣ *Как оплатить?*
 Предоплата 200 BYN — место ваше. Остаток при заезде. Перевод на карту или наличные.
 
-6️⃣ Условия возврата предоплаты?
+6️⃣ *Условия возврата предоплаты?*
 При отмене за 2 недели — возврат 100%. За 3 дня — возврат 50%. За 1 день — без возврата.
 
-7️⃣ Питание: что готовят?
+7️⃣ *Питание: что готовят?*
 Домашняя кухня. Вкусно, сытно, с любовью. При аллергиях — предупредите.
 
-8️⃣ Можно ли приехать одной?
+8️⃣ *Можно ли приехать одной?*
 Да, это опыт, который часто глубже проживается в одиночестве. Вы не будете одиноки — круг поддержит.
 
-9️⃣ Что даёт мандала выбора цвета?
+9️⃣ *Что даёт мандала выбора цвета?*
 Вы выбираете чёрный (Янь/сила) или белый (Инь/принятие) шнур. А на третий день добавляете второй — это становится вашим личным символом баланса.
 
-🔟 Ретрит — это про религию?
+🔟 *Ретрит — это про религию?*
 Нет. Это про женскую силу, тело, тишину и осознанность. Без привязки к конфессиям.
 
-🌐 Все ответы и детали: https://retreat.idealab.by
+🌐 ${SITE_URL}
 
 Есть другие вопросы? Напишите @${ORGANIZER_TG}`,
-        { disable_web_page_preview: true });
+        { parse_mode: 'Markdown', disable_web_page_preview: true });
+    await showRetreatMenu(chatId);
 }
 
 async function askForPhone(chatId) {
@@ -313,6 +376,26 @@ async function askForPhone(chatId) {
         }
     });
 }
+
+// ===== ШУТКИ ПРИ ИГНОРЕ =====
+const funnyReminders = [
+    "😏 Я вижу, ты меня игнорируешь... Но подарок всё ещё ждёт!",
+    "🦥 Привет! Я без напряга, просто напоминаю о себе 🌿",
+    "🎈 Тук-тук! Не забыла про практику?"
+];
+
+async function sendFunnyReminder(chatId) {
+    const randomIndex = Math.floor(Math.random() * funnyReminders.length);
+    await bot.sendMessage(chatId, funnyReminders[randomIndex] + '\n\nХочешь получать заботливые напоминания?', {
+        reply_markup: {
+            inline_keyboard: [
+                [{ text: '👍 Да, продолжай', callback_data: 'continue_reminders' }],
+                [{ text: '🔕 Отстань', callback_data: 'stop_reminders' }]
+            ]
+        }
+    });
+}
+
 // ===== НАПОМИНАНИЯ =====
 function getReminderMessage(day, type, name) {
     const map = {
@@ -324,37 +407,39 @@ function getReminderMessage(day, type, name) {
 }
 
 function checkReminders() {
-    const users = JSON.parse(fs.readFileSync('users.json', 'utf8') || '{}');
-    const now = new Date();
-    const hour = now.getHours();
-    if (hour >= 23 || hour < 9) return;
-    for (const [chatId, user] of Object.entries(users)) {
-        if (user.noReminders) continue;
-        if (!user.testCompleted && !user.dialogCompletedAt) continue;
-        const lastActivity = new Date(user.testCompleted || user.dialogCompletedAt || user.updated);
-        const daysDiff = Math.floor((now - lastActivity) / (1000 * 3600 * 24));
-        const type = user.testType || 'balance';
-        const name = user.name || 'друг';
-        [1, 3, 7].forEach(day => {
-            const flag = `reminder_${day}_sent`;
-            if (daysDiff >= day && daysDiff < day + 1 && !user[flag]) {
-                bot.sendMessage(chatId, getReminderMessage(day, type, name));
-                saveUser(chatId, { [flag]: true });
-                let noResponseCount = (user.noResponseCount || 0) + 1;
-                if (noResponseCount >= 2) {
-                    setTimeout(() => sendFunnyReminder(chatId), 60000);
-                    saveUser(chatId, { noResponseCount: 0 });
-                } else {
-                    saveUser(chatId, { noResponseCount });
+    try {
+        const users = JSON.parse(fs.readFileSync('users.json', 'utf8') || '{}');
+        const now = new Date();
+        const hour = now.getHours();
+        if (hour >= 23 || hour < 9) return;
+        for (const [chatId, user] of Object.entries(users)) {
+            if (user.noReminders) continue;
+            if (!user.testCompleted && !user.dialogCompletedAt) continue;
+            const lastActivity = new Date(user.testCompleted || user.dialogCompletedAt || user.updated);
+            const daysDiff = Math.floor((now - lastActivity) / (1000 * 3600 * 24));
+            const type = user.testType || 'balance';
+            const name = user.name || 'друг';
+            [1, 3, 7].forEach(day => {
+                const flag = `reminder_${day}_sent`;
+                if (daysDiff >= day && daysDiff < day + 1 && !user[flag]) {
+                    bot.sendMessage(chatId, getReminderMessage(day, type, name));
+                    saveUser(chatId, { [flag]: true });
+                    let noResponseCount = (user.noResponseCount || 0) + 1;
+                    if (noResponseCount >= 2) {
+                        setTimeout(() => sendFunnyReminder(chatId), 60000);
+                        saveUser(chatId, { noResponseCount: 0 });
+                    } else {
+                        saveUser(chatId, { noResponseCount });
+                    }
                 }
+            });
+            const retreatDiff = Math.ceil((RETREAT_DATE - now) / (1000 * 3600 * 24));
+            if (retreatDiff === 3 && !user.retreatReminderSent) {
+                bot.sendMessage(chatId, `🎉 ${name}, через 3 ДНЯ РЕТРИТ! Очень жду встречи 🤍`);
+                saveUser(chatId, { retreatReminderSent: true });
             }
-        });
-        const retreatDiff = Math.ceil((RETREAT_DATE - now) / (1000 * 3600 * 24));
-        if (retreatDiff === 3 && !user.retreatReminderSent) {
-            bot.sendMessage(chatId, `🎉 ${name}, через 3 ДНЯ РЕТРИТ! Очень жду встречи 🤍`);
-            saveUser(chatId, { retreatReminderSent: true });
         }
-    }
+    } catch(e) {}
 }
 setInterval(checkReminders, 1000 * 60 * 60 * 6);
 
@@ -453,14 +538,40 @@ bot.on('message', (msg) => {
     }
     else if (d.step === 'fears') {
         d.data.fears = msg.text;
+        const name = d.data.name;
+        const feeling = d.data.feeling;
+        const need = d.data.need;
+        const exp = d.data.exp;
+        
         saveUser(chatId, d.data);
         delete userDialogs[chatId];
-        bot.sendMessage(chatId, `🤍 Спасибо!\n\nЧто дальше?`, {
+        
+        // БЛАГОДАРНОСТЬ С АНАЛИЗОМ ОТВЕТОВ
+        let analysisMessage = `🤍 *Спасибо за твои ответы, ${name}!*
+
+Я сохранила их для себя, чтобы лучше понять, что тебе сейчас важно.
+
+💡 *Вот что я заметила:*
+
+• Тебе не хватает ${need.toLowerCase()}
+• Сейчас ты чувствуешь ${feeling.toLowerCase()}
+• ${exp === 'Никогда' ? 'Ретриты для тебя новое пространство — это прекрасно!' : (exp === '1-2 раза' ? 'У тебя уже есть небольшой опыт ретритов — ты знаешь, что это даёт' : 'Ты опытная участница — тебе знакомо глубинное погружение')}
+
+🎁 *У меня для тебя есть несколько предложений:*
+
+1. Пройти короткий тест «Инь/Янь» — чтобы увидеть свой баланс
+2. Получить 2 практики в подарок (расслабление + энергия)
+3. Узнать подробнее о ретрите «Инь·Янь. Баланс»
+
+Что выберешь?`;
+        
+        bot.sendMessage(chatId, analysisMessage, {
+            parse_mode: 'Markdown',
             reply_markup: {
                 inline_keyboard: [
-                    [{ text: '🌓 Тест', callback_data: 'start_test' }],
-                    [{ text: '🎁 Подарок', callback_data: 'get_gift' }],
-                    [{ text: '🌿 О ретрите', callback_data: 'show_retreat_menu' }]
+                    [{ text: '🌓 ПРОЙТИ ТЕСТ', callback_data: 'start_test' }],
+                    [{ text: '🎁 ПОЛУЧИТЬ ПОДАРОК', callback_data: 'get_gift' }],
+                    [{ text: '🌿 О РЕТРИТЕ', callback_data: 'show_retreat_menu' }]
                 ]
             }
         });
@@ -476,14 +587,21 @@ bot.on('callback_query', async (query) => {
 
     console.log(`🔔 ${data} от ${chatId}`);
 
-    // БРОНИРОВАНИЕ (САМОЕ ВАЖНОЕ)
+    // БРОНИРОВАНИЕ
     if (data === 'booking') {
         await askForPhone(chatId);
         await bot.answerCallbackQuery(query.id);
         return;
     }
 
-    // МЕНЮ РЕТРИТА (РАБОТАЕТ!)
+    // ГЛАВНОЕ МЕНЮ
+    if (data === 'show_main_menu') {
+        await showMainMenu(chatId);
+        await bot.answerCallbackQuery(query.id);
+        return;
+    }
+
+    // МЕНЮ РЕТРИТА
     if (data === 'show_retreat_menu') {
         await showRetreatMenu(chatId);
         await bot.answerCallbackQuery(query.id);
@@ -491,6 +609,7 @@ bot.on('callback_query', async (query) => {
     }
     if (data === 'menu_photos') {
         await sendPhotos(chatId);
+        await showRetreatMenu(chatId);
         await bot.answerCallbackQuery(query.id);
         return;
     }
@@ -517,21 +636,6 @@ bot.on('callback_query', async (query) => {
     if (data === 'get_gift') {
         const user = getUser(chatId);
         await bot.sendMessage(chatId, getGift(user.testType || 'balance', user.name || 'гостья'));
-        await bot.answerCallbackQuery(query.id);
-        return;
-    }
-    if (data === 'main_menu') {
-        await bot.sendMessage(chatId, 'Главное меню:', {
-            reply_markup: {
-                keyboard: [
-                    [{ text: '🧘‍♀️ Начать подбор' }],
-            [{ text: '🎁 Подарок' }, { text: '🌿 О ретрите' }],
-            [{ text: '❓ FAQ' }, { text: '📞 Контакты' }, { text: '🌐 Сайт' }],
-            [{ text: '👭 Пригласить подругу' }]  // 🔥 НОВАЯ КНОПКА
-        ],
-        resize_keyboard: true
-            }
-        });
         await bot.answerCallbackQuery(query.id);
         return;
     }
@@ -591,11 +695,42 @@ bot.on('callback_query', async (query) => {
     if (data === 'fears_none') {
         if (d) {
             d.data.fears = 'Ничего';
+            const name = d.data.name;
+            const feeling = d.data.feeling;
+            const need = d.data.need;
+            const exp = d.data.exp;
+            
             saveUser(chatId, d.data);
             delete userDialogs[chatId];
-            await bot.editMessageText('🤍 Спасибо!\n\nЧто дальше?', {
+            
+            let analysisMessage = `🤍 *Спасибо за твои ответы, ${name}!*
+
+Я сохранила их для себя, чтобы лучше понять, что тебе сейчас важно.
+
+💡 *Вот что я заметила:*
+
+• Тебе не хватает ${need.toLowerCase()}
+• Сейчас ты чувствуешь ${feeling.toLowerCase()}
+• ${exp === 'Никогда' ? 'Ретриты для тебя новое пространство — это прекрасно!' : (exp === '1-2 раза' ? 'У тебя уже есть небольшой опыт ретритов — ты знаешь, что это даёт' : 'Ты опытная участница — тебе знакомо глубинное погружение')}
+
+🎁 *У меня для тебя есть несколько предложений:*
+
+1. Пройти короткий тест «Инь/Янь» — чтобы увидеть свой баланс
+2. Получить 2 практики в подарок (расслабление + энергия)
+3. Узнать подробнее о ретрите «Инь·Янь. Баланс»
+
+Что выберешь?`;
+            
+            await bot.editMessageText(analysisMessage, {
                 chat_id: chatId, message_id: msgId,
-                reply_markup: { inline_keyboard: [[{ text: '🌓 Тест', callback_data: 'start_test' }], [{ text: '🎁 Подарок', callback_data: 'get_gift' }], [{ text: '🌿 О ретрите', callback_data: 'show_retreat_menu' }]] }
+                parse_mode: 'Markdown',
+                reply_markup: { 
+                    inline_keyboard: [
+                        [{ text: '🌓 ПРОЙТИ ТЕСТ', callback_data: 'start_test' }],
+                        [{ text: '🎁 ПОЛУЧИТЬ ПОДАРОК', callback_data: 'get_gift' }], 
+                        [{ text: '🌿 О РЕТРИТЕ', callback_data: 'show_retreat_menu' }]
+                    ] 
+                }
             });
         }
         await bot.answerCallbackQuery(query.id);
@@ -605,22 +740,43 @@ bot.on('callback_query', async (query) => {
         delete userDialogs[chatId];
         await bot.editMessageText('🌿 Хорошо, вернёмся позже.', {
             chat_id: chatId, message_id: msgId,
-            reply_markup: { inline_keyboard: [[{ text: '🌓 Тест', callback_data: 'start_test' }], [{ text: '🎁 Подарок', callback_data: 'get_gift' }], [{ text: '🌿 О ретрите', callback_data: 'show_retreat_menu' }]] }
+            reply_markup: { 
+                inline_keyboard: [
+                    [{ text: '🌓 ПРОЙТИ ТЕСТ', callback_data: 'start_test' }],
+                    [{ text: '🎁 ПОЛУЧИТЬ ПОДАРОК', callback_data: 'get_gift' }], 
+                    [{ text: '🌿 О РЕТРИТЕ', callback_data: 'show_retreat_menu' }]
+                ] 
+            }
         });
         await bot.answerCallbackQuery(query.id);
         return;
     }
 
-    // ТЕСТ
+    // ТЕСТ - показывает пояснение
     if (data === 'start_test') {
+        await showTestExplanation(chatId);
+        await bot.answerCallbackQuery(query.id);
+        return;
+    }
+    
+    // НАЧАЛО ТЕСТА после пояснения
+    if (data === 'start_test_real') {
         testAnswers[chatId] = [];
         await bot.editMessageText('🌓 Вопрос 1/3\n\nКогда проблема — действуешь или наблюдаешь?', {
-            chat_id: chatId, message_id: msgId,
-            reply_markup: { inline_keyboard: [[{ text: '⚡ Действую', callback_data: 'test_yang' }], [{ text: '🌙 Наблюдаю', callback_data: 'test_yin' }]] }
+            chat_id: chatId, 
+            message_id: msgId,
+            reply_markup: { 
+                inline_keyboard: [
+                    [{ text: '⚡ Действую', callback_data: 'test_yang' }], 
+                    [{ text: '🌙 Наблюдаю', callback_data: 'test_yin' }]
+                ] 
+            }
         });
         await bot.answerCallbackQuery(query.id);
         return;
     }
+
+    // ОТВЕТЫ НА ТЕСТ
     if (data === 'test_yin' || data === 'test_yang') {
         if (!testAnswers[chatId]) testAnswers[chatId] = [];
         testAnswers[chatId].push(data);
@@ -669,8 +825,10 @@ bot.on('contact', (msg) => {
     saveUser(chatId, { phone, status: 'lead' });
     updateStats('phone');
     bot.sendMessage(chatId, `✅ Спасибо! @${ORGANIZER_TG} свяжется с вами.`);
+    bot.sendMessage(chatId, `🌐 Подробнее о ретрите: ${SITE_URL}`);
     bot.sendMessage(`@${ADMIN_ID}`, `📞 Новый лид: ${phone}`);
 });
+
 bot.on('message', (msg) => {
     const text = msg.text;
     if (text && text.match(/^[\+\d\s\-\(\)]{10,20}$/)) {
@@ -679,83 +837,31 @@ bot.on('message', (msg) => {
         saveUser(chatId, { phone: phone.startsWith('+') ? phone : '+' + phone, status: 'lead' });
         updateStats('phone');
         bot.sendMessage(chatId, `✅ Спасибо! @${ORGANIZER_TG} свяжется с вами.`);
+        bot.sendMessage(chatId, `🌐 Подробнее о ретрите: ${SITE_URL}`);
         bot.sendMessage(`@${ADMIN_ID}`, `📞 Новый лид: ${phone}`);
     }
 });
 
-// ===== КНОПКИ ГЛАВНОГО МЕНЮ =====
-bot.onText(/🧘‍♀️ Начать подбор/, (msg) => {
-    userDialogs[msg.chat.id] = { step: 'name', data: {} };
-    bot.sendMessage(msg.chat.id, 'Как тебя зовут?');
-});
-bot.onText(/🎁 Подарок/, (msg) => {
-    const user = getUser(msg.chat.id);
-    bot.sendMessage(msg.chat.id, getGift(user.testType || 'balance', user.name || 'гостья'));
-});
-bot.onText(/🌿 О ретрите/, (msg) => showRetreatMenu(msg.chat.id));
-bot.onText(/❓ FAQ/, (msg) => showFAQ(msg.chat.id));
-bot.onText(/📞 Контакты/, (msg) => bot.sendMessage(msg.chat.id, `📞 @${ORGANIZER_TG}\n📞 ${ORGANIZER_PHONE}`));
-bot.onText(/🌐 Сайт/, (msg) => bot.sendMessage(msg.chat.id, '🌐 Сайт скоро появится'));
-
-// ===== СТАТИСТИКА ДЛЯ АДМИНА =====
-bot.onText(/\/stats/, (msg) => {
-    if (msg.from.username !== ADMIN_ID && msg.chat.id.toString() !== ADMIN_ID) return bot.sendMessage(msg.chat.id, '⛔ Только для организатора');
-    bot.sendMessage(msg.chat.id, `📊 Статистика:\nВсего: ${userStats.total}\nТест: ${userStats.completedTest}\nТелефон: ${userStats.leftPhone}`);
-});
-// ===== КОМАНДА /zayavki (показать все заявки) =====
-bot.onText(/\/zayavki/, (msg) => {
-    const chatId = msg.chat.id;
-    const username = msg.from.username;
-    
-    // Только для админа
-    if (username !== ADMIN_ID && chatId.toString() !== ADMIN_ID) {
-        return bot.sendMessage(chatId, '⛔ Только для организатора');
-    }
-    
-    try {
-        const users = JSON.parse(fs.readFileSync('users.json', 'utf8') || '{}');
-        let text = '📞 *НОВЫЕ ЗАЯВКИ*\n\n';
-        let count = 0;
-        
-        for (const [id, user] of Object.entries(users)) {
-            if (user.phone && user.status === 'lead') {
-                count++;
-                const name = user.name || 'Без имени';
-                const phone = user.phone;
-                const date = new Date(user.updated || user.phoneLeftAt).toLocaleString();
-                text += `${count}. 👤 *${name}*\n   📞 ${phone}\n   🕐 ${date}\n\n`;
-            }
-        }
-        
-        if (count === 0) {
-            text = '📭 Пока нет новых заявок';
-        } else {
-            text = `📞 *ЗАЯВКИ (${count})*\n\n` + text.substring(text.indexOf('\n\n') + 2);
-        }
-        
-        bot.sendMessage(chatId, text, { parse_mode: 'Markdown' });
-    } catch(e) {
-        bot.sendMessage(chatId, '❌ Ошибка при чтении заявок');
-        console.log(e);
-    }
-});
 // ===== ПРИГЛАСИТЬ ПОДРУГУ =====
+// Обработчик кнопки "Пригласить подругу" из главного меню
 bot.onText(/👭 Пригласить подругу/, async (msg) => {
     const chatId = msg.chat.id;
-    const botUsername = (await bot.getMe()).username;
-    const link = `https://t.me/${botUsername}?start=ref_${chatId}`;
+    userDialogs[chatId] = { step: 'invite_friend', data: {} };
     
     bot.sendMessage(chatId,
-        `👭 *Пригласи подругу*
+        `👭 *Пригласи подругу и получите скидку 10%*
 
-Отправь ей эту ссылку:
+🔗 *Как зовут твою подругу?*
+Напиши её Telegram username (например: @anna)
 
-🔗 ${link}
+💡 *Важно:* У каждой подруги будет ПЕРСОНАЛЬНАЯ ссылка.
+Если она забронирует ретрит, ВЫ ОБЕ получите скидку 10% на следующий ретрит 🤍
 
-По ссылке подруга получит скидку 10% на ретрит 🤍`,
-        { parse_mode: 'Markdown', disable_web_page_preview: true }
+Просто отправь мне её username:`,
+        { parse_mode: 'Markdown' }
     );
 });
+
 // Обработка введённого username подруги
 bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
@@ -764,15 +870,19 @@ bot.on('message', async (msg) => {
     
     if (!d || d.step !== 'invite_friend') return;
     
-    if (!text.startsWith('@')) {
-        bot.sendMessage(chatId, '❌ Пожалуйста, начни с @, например: @anna');
-        delete userDialogs[chatId];
+    let friendUsername = text;
+    if (friendUsername.startsWith('@')) {
+        friendUsername = friendUsername.substring(1);
+    }
+    
+    if (!friendUsername || friendUsername.length < 3) {
+        bot.sendMessage(chatId, '❌ Пожалуйста, напиши корректный username, например: @anna или просто anna');
         return;
     }
     
-    const friendUsername = text.replace('@', '');
     const inviterName = msg.from.first_name;
     const botUsername = (await bot.getMe()).username;
+    const inviteLink = `https://t.me/${botUsername}?start=ref_${chatId}`;
     
     // Сохраняем приглашение
     let invites = {};
@@ -786,20 +896,31 @@ bot.on('message', async (msg) => {
     };
     fs.writeFileSync('invites.json', JSON.stringify(invites, null, 2));
     
-    const inviteLink = `https://t.me/${botUsername}?start=ref_${chatId}`;
-    
     bot.sendMessage(chatId,
-        `👭 *Отправь ссылку подруге @${friendUsername}*
+        `👭 *Персональная ссылка для @${friendUsername}*
 
-🌸 Скопируй и отправь ей это сообщение:
+Отправь ей это сообщение:
 
 ———
-${inviterName} приглашает тебя на ретрит и дарит скидку 10%! 👉 ${inviteLink}
+🌸 *${inviterName} приглашает тебя на ретрит!*
 
-После бронирования напиши боту /confirm
+🔗 *Твоя персональная ссылка со скидкой:*
+${inviteLink}
+
+По этой ссылке у тебя будет скидка 10% на ретрит «Инь·Янь. Баланс»
+
+❕ *Важно:* ссылка персональная, только для тебя!
+
+🌐 ${SITE_URL}
 ———
 
-✅ Как только подруга перейдёт по ссылке и забронирует место — ты получишь уведомление!`,
+✅ *Что дальше?*
+1. Твоя подруга переходит по ссылке
+2. Бронирует место (оставляет телефон)
+3. Пишет боту команду /confirm
+4. ВЫ ОБЕ получаете скидку 10% на следующий ретрит!
+
+💚 Статус приглашения можно проверить у организатора @${ORGANIZER_TG}`,
         { parse_mode: 'Markdown', disable_web_page_preview: true }
     );
     
@@ -833,17 +954,93 @@ bot.onText(/\/confirm/, async (msg) => {
     fs.writeFileSync('invites.json', JSON.stringify(invites, null, 2));
     
     bot.sendMessage(invite.invitedBy, 
-        `🎁 *Подарок!* Твоя подруга @${username} подтвердила бронирование!\n\nВы обе получаете скидку 10% на следующий ретрит.\n\nНапиши организатору @${ORGANIZER_TG} и скажи промокод FRIEND10 🤍`,
+        `🎁 *Подарок!* Твоя подруга @${username} подтвердила бронирование!
+
+Вы обе получаете скидку 10% на следующий ретрит.
+
+Напиши организатору @${ORGANIZER_TG} и скажи промокод FRIEND10 🤍
+
+🌐 ${SITE_URL}`,
         { parse_mode: 'Markdown' }
     );
     
     bot.sendMessage(chatId,
-        `🎁 *Поздравляю!* Ты подтвердила бронирование по приглашению.\n\nВы обе получаете скидку 10% на следующий ретрит.\n\nНапиши организатору @${ORGANIZER_TG} и скажи промокод FRIEND10 🤍`,
+        `🎁 *Поздравляю!* Ты подтвердила бронирование по приглашению.
+
+Вы обе получаете скидку 10% на следующий ретрит.
+
+Напиши организатору @${ORGANIZER_TG} и скажи промокод FRIEND10 🤍
+
+🌐 ${SITE_URL}`,
         { parse_mode: 'Markdown' }
     );
 });
 
-// Команда /invites — для админа
+// ===== КНОПКИ ГЛАВНОГО МЕНЮ (текстовые команды) =====
+bot.onText(/🧘‍♀️ Начать подбор/, (msg) => {
+    userDialogs[msg.chat.id] = { step: 'name', data: {} };
+    bot.sendMessage(msg.chat.id, '🌿 Как тебя зовут?');
+});
+
+bot.onText(/🎁 Подарок/, (msg) => {
+    const user = getUser(msg.chat.id);
+    bot.sendMessage(msg.chat.id, getGift(user.testType || 'balance', user.name || 'гостья'));
+});
+
+bot.onText(/🌿 О ретрите/, (msg) => showRetreatMenu(msg.chat.id));
+bot.onText(/❓ FAQ/, (msg) => showFAQ(msg.chat.id));
+bot.onText(/📞 Контакты/, (msg) => bot.sendMessage(msg.chat.id, `📞 @${ORGANIZER_TG}\n📞 ${ORGANIZER_PHONE}\n\n🌐 ${SITE_URL}`));
+bot.onText(/🌐 Сайт/, (msg) => bot.sendMessage(msg.chat.id, `🌐 ${SITE_URL}`));
+
+// ===== АДМИНИСТРАТОРСКИЕ КОМАНДЫ =====
+bot.onText(/\/stats/, (msg) => {
+    if (msg.from.username !== ADMIN_ID && msg.chat.id.toString() !== ADMIN_ID) return bot.sendMessage(msg.chat.id, '⛔ Только для организатора');
+    bot.sendMessage(msg.chat.id, `📊 *СТАТИСТИКА*
+
+👥 Всего пользователей: ${userStats.total}
+✅ Начали диалог: ${userStats.started}
+🌓 Прошли тест: ${userStats.completedTest}
+📞 Оставили телефон: ${userStats.leftPhone}
+
+🌐 ${SITE_URL}`, { parse_mode: 'Markdown' });
+});
+
+bot.onText(/\/zayavki/, (msg) => {
+    const chatId = msg.chat.id;
+    const username = msg.from.username;
+    
+    if (username !== ADMIN_ID && chatId.toString() !== ADMIN_ID) {
+        return bot.sendMessage(chatId, '⛔ Только для организатора');
+    }
+    
+    try {
+        const users = JSON.parse(fs.readFileSync('users.json', 'utf8') || '{}');
+        let text = '📞 *НОВЫЕ ЗАЯВКИ*\n\n';
+        let count = 0;
+        
+        for (const [id, user] of Object.entries(users)) {
+            if (user.phone && user.status === 'lead') {
+                count++;
+                const name = user.name || 'Без имени';
+                const phone = user.phone;
+                const date = new Date(user.updated || user.phoneLeftAt).toLocaleString();
+                text += `${count}. 👤 *${name}*\n   📞 ${phone}\n   🕐 ${date}\n\n`;
+            }
+        }
+        
+        if (count === 0) {
+            text = '📭 Пока нет новых заявок';
+        } else {
+            text = `📞 *ЗАЯВКИ (${count})*\n\n` + text.substring(text.indexOf('\n\n') + 2);
+        }
+        
+        bot.sendMessage(chatId, text, { parse_mode: 'Markdown' });
+    } catch(e) {
+        bot.sendMessage(chatId, '❌ Ошибка при чтении заявок');
+        console.log(e);
+    }
+});
+
 bot.onText(/\/invites/, (msg) => {
     const username = msg.from.username;
     if (username !== ADMIN_ID && msg.chat.id.toString() !== ADMIN_ID) {
@@ -851,8 +1048,8 @@ bot.onText(/\/invites/, (msg) => {
     }
     
     try {
-        const invites = JSON.parse(fs.readFileSync('invites.json'));
-        let text = '👭 *Список приглашений*\n\n';
+        const invites = JSON.parse(fs.readFileSync('invites.json', 'utf8') || '{}');
+        let text = '👭 *СПИСОК ПРИГЛАШЕНИЙ*\n\n';
         let count = 0;
         
         for (const [friend, data] of Object.entries(invites)) {
@@ -869,7 +1066,9 @@ bot.onText(/\/invites/, (msg) => {
         bot.sendMessage(msg.chat.id, '📭 Пока нет приглашений');
     }
 });
+
 // ===== СЕРВЕР =====
 const server = http.createServer((req, res) => res.end('Bot running'));
 server.listen(8080, () => console.log('✅ Сервер на 8080'));
 console.log('🚀 БОТ ЗАПУЩЕН! ВСЕ КНОПКИ РАБОТАЮТ!');
+console.log('🌐 Сайт ретрита: ' + SITE_URL);
