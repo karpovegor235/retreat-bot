@@ -18,34 +18,52 @@ const PHOTOS = [
     '1GwcICQaqLs0-tJDLFdW1UYUFJTJC7yRc'
 ];
 
-// ===== СОЗДАНИЕ БОТА =====
+// ===== БЕЗОПАСНАЯ ОТПРАВКА С ПОВТОРАМИ =====
+async function safeSend(chatId, content, options = {}, retries = 3) {
+    for (let i = 0; i < retries; i++) {
+        try {
+            if (typeof content === 'string') {
+                return await bot.sendMessage(chatId, content, options);
+            }
+        } catch (error) {
+            console.log(`⚠️ Ошибка отправки (попытка ${i + 1}/${retries}):`, error.message);
+            if (i === retries - 1) throw error;
+            await new Promise(r => setTimeout(r, 2000));
+        }
+    }
+}
+
+// ===== СОЗДАНИЕ БОТА (СТАБИЛЬНАЯ ВЕРСИЯ) =====
 const bot = new TelegramBot(TOKEN, { 
     polling: {
-        interval: 500,
+        interval: 3000,      // Увеличен интервал для стабильности
         autoStart: true,
         params: {
-            timeout: 30,
+            timeout: 60,     // Увеличен таймаут
             allowed_updates: ['message', 'callback_query']
         }
     },
     request: {
-        timeout: 30000
+        timeout: 60000       // Увеличен таймаут запросов
     }
 });
 
-// ===== ОБРАБОТКА ОШИБОК =====
+// ===== МЯГКАЯ ОБРАБОТКА ОШИБОК (БЕЗ ПЕРЕЗАПУСКА) =====
 process.on('uncaughtException', (error) => {
     console.log('❌ Необработанная ошибка:', error.message);
-    process.exit(1);
+    // НЕ выходим из процесса - просто логируем
 });
 
 process.on('unhandledRejection', (error) => {
     console.log('❌ Необработанный rejection:', error);
-    process.exit(1);
+    // НЕ выходим из процесса - просто логируем
 });
 
 bot.on('polling_error', (error) => {
     console.log('❌ Ошибка polling:', error.code, error.message);
+    if (error.code === 'EFATAL' || error.message?.includes('ESOCKETTIMEDOUT')) {
+        console.log('⏳ Проблема с сетью, продолжаем работу...');
+    }
 });
 
 bot.on('error', (error) => {
@@ -85,8 +103,12 @@ function getUser(chatId) {
 // ===== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ =====
 async function sendPhotos(chatId) {
     for (const id of PHOTOS) {
-        await bot.sendPhoto(chatId, `https://drive.google.com/uc?export=view&id=${id}`, { caption: '🌿 Здесь будет наш ретрит' });
-        await new Promise(r => setTimeout(r, 800));
+        try {
+            await bot.sendPhoto(chatId, `https://drive.google.com/uc?export=view&id=${id}`, { caption: '🌿 Здесь будет наш ретрит' });
+            await new Promise(r => setTimeout(r, 1500));
+        } catch(e) {
+            console.log('Ошибка отправки фото:', e.message);
+        }
     }
 }
 
@@ -164,7 +186,7 @@ async function sendPersonalizedAdvice(chatId, type, name) {
 Ты на правильном пути. Гармония — не статика, а танец. Приглашаю потанцевать 🤍`;
     }
     
-    await bot.sendMessage(chatId, message);
+    await safeSend(chatId, message);
 }
 
 // ===== ПОЯСНЕНИЕ ПЕРЕД ТЕСТОМ =====
@@ -226,7 +248,6 @@ async function showRetreatMenu(chatId) {
     });
 }
 
-// ИСПРАВЛЕННЫЕ ФУНКЦИИ - БЕЗ parse_mode: 'Markdown'
 async function showProgram(chatId) {
     await bot.sendMessage(chatId,
         `🌙 ПРОГРАММА РЕТРИТА «ИНЬ·ЯНЬ. БАЛАНС»
@@ -895,6 +916,7 @@ const inviteHandler = async (msg) => {
     
     const inviterName = msg.from.first_name;
     const botUsername = (await bot.getMe()).username;
+    // ИСПРАВЛЕНО: добавлено подчёркивание после ref
     const inviteLink = `https://t.me/${botUsername}?start=ref_${chatId}`;
     
     let invites = {};
