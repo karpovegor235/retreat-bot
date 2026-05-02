@@ -18,12 +18,34 @@ const PHOTOS = [
     '1GwcICQaqLs0-tJDLFdW1UYUFJTJC7yRc'
 ];
 
-// ===== СОЗДАНИЕ БОТА (ПРОСТОЕ, БЕЗ АВТОПЕРЕЗАПУСКА) =====
-const bot = new TelegramBot(TOKEN, { polling: true });
+// ===== СОЗДАНИЕ БОТА =====
+const bot = new TelegramBot(TOKEN, { 
+    polling: {
+        interval: 500,
+        autoStart: true,
+        params: {
+            timeout: 30,
+            allowed_updates: ['message', 'callback_query']
+        }
+    },
+    request: {
+        timeout: 30000
+    }
+});
+
+// ===== ОБРАБОТКА ОШИБОК =====
+process.on('uncaughtException', (error) => {
+    console.log('❌ Необработанная ошибка:', error.message);
+    process.exit(1);
+});
+
+process.on('unhandledRejection', (error) => {
+    console.log('❌ Необработанный rejection:', error);
+    process.exit(1);
+});
 
 bot.on('polling_error', (error) => {
     console.log('❌ Ошибка polling:', error.code, error.message);
-    // НЕ ПЕРЕЗАПУСКАЕМ - просто логируем
 });
 
 bot.on('error', (error) => {
@@ -185,7 +207,7 @@ async function showMainMenu(chatId) {
     });
 }
 
-// ===== МЕНЮ РЕТРИТА (повторяется после каждого ответа) =====
+// ===== МЕНЮ РЕТРИТА =====
 async function showRetreatMenu(chatId) {
     await bot.sendMessage(chatId, '🌿 *Что тебе рассказать о ретрите?*', {
         parse_mode: 'Markdown',
@@ -196,6 +218,7 @@ async function showRetreatMenu(chatId) {
                 [{ text: '💰 Стоимость', callback_data: 'menu_price' }],
                 [{ text: '🧘‍♀️ Практики', callback_data: 'menu_practices' }],
                 [{ text: '❓ FAQ', callback_data: 'menu_faq' }],
+                [{ text: '👭 Пригласить подругу', callback_data: 'invite_friend_menu' }],
                 [{ text: '💚 ЗАБРОНИРОВАТЬ', callback_data: 'booking' }],
                 [{ text: '🔙 Главное меню', callback_data: 'show_main_menu' }]
             ]
@@ -582,6 +605,25 @@ bot.on('callback_query', async (query) => {
         await bot.answerCallbackQuery(query.id);
         return;
     }
+    
+    if (data === 'invite_friend_menu') {
+        userDialogs[chatId] = { step: 'invite_friend', data: {} };
+        await bot.sendMessage(chatId,
+            `👭 *Пригласи подругу и получите скидку 10%*
+
+🔗 *Как зовут твою подругу?*
+Напиши её Telegram username (например: @anna)
+
+💡 *Важно:* У каждой подруги будет ПЕРСОНАЛЬНАЯ ссылка.
+Если она забронирует ретрит, ВЫ ОБЕ получите скидку 10% на следующий ретрит 🤍
+
+Просто отправь мне её username:`,
+            { parse_mode: 'Markdown' }
+        );
+        await bot.answerCallbackQuery(query.id);
+        return;
+    }
+    
     if (data === 'menu_photos') {
         await sendPhotos(chatId);
         await showRetreatMenu(chatId);
