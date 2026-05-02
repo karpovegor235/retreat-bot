@@ -226,11 +226,12 @@ async function showRetreatMenu(chatId) {
     });
 }
 
+// ИСПРАВЛЕННЫЕ ФУНКЦИИ - БЕЗ parse_mode: 'Markdown'
 async function showProgram(chatId) {
     await bot.sendMessage(chatId,
-        `🌙 *ПРОГРАММА РЕТРИТА «ИНЬ·ЯНЬ. БАЛАНС»*
+        `🌙 ПРОГРАММА РЕТРИТА «ИНЬ·ЯНЬ. БАЛАНС»
 
-*🌙 ПЯТНИЦА, 29 МАЯ — ВСТРЕЧА И ВЫБОР ЦВЕТА*
+🌙 ПЯТНИЦА, 29 МАЯ — ВСТРЕЧА И ВЫБОР ЦВЕТА
 14:00 — Заезд, расселение, обед
 16:00 — «Первая тишина» — знакомство с артефактом
 17:00 — «Зеркало круга» — глубинное знакомство
@@ -239,7 +240,7 @@ async function showProgram(chatId) {
 20:00 — Ужин
 21:00 — Вечерняя тишина
 
-*☀️ СУББОТА, 30 МАЯ — ПОГРУЖЕНИЕ*
+☀️ СУББОТА, 30 МАЯ — ПОГРУЖЕНИЕ
 08:00 — Инь-йога
 09:30 — Завтрак
 11:00 — «Река течёт» — образ своих застоев
@@ -249,7 +250,7 @@ async function showProgram(chatId) {
 19:00 — Ужин
 20:00 — Баня
 
-*🌸 ВОСКРЕСЕНЬЕ, 31 МАЯ — ИНТЕГРАЦИЯ*
+🌸 ВОСКРЕСЕНЬЕ, 31 МАЯ — ИНТЕГРАЦИЯ
 08:00 — Янь-йога
 09:30 — Завтрак
 11:00 — «Переворот» — от страха к силе
@@ -257,20 +258,20 @@ async function showProgram(chatId) {
 14:00 — Круг закрытия
 15:00 — Обед и отъезд
 
-*«Перемены не случаются в голове. Они проживаются через тело, действие и тишину».*
-*Все практики авторские. Никакого насилия над собой. Только забота 🤍*
+«Перемены не случаются в голове. Они проживаются через тело, действие и тишину».
+Все практики авторские. Никакого насилия над собой. Только забота 🤍
 
 🌐 ${SITE_URL}`,
-        { parse_mode: 'Markdown', disable_web_page_preview: true });
+        { disable_web_page_preview: true });
     await showRetreatMenu(chatId);
 }
 
 async function showPrice(chatId) {
     await bot.sendMessage(chatId,
-        `💰 *СТОИМОСТЬ УЧАСТИЯ — 600 BYN*
+        `💰 СТОИМОСТЬ УЧАСТИЯ — 600 BYN
 
-*Включено в стоимость:*
-• Проживание 2 ночи в коттедже (2‑3 человека в комнате, все удобства)
+Включено в стоимость:
+• Проживание 2 ночи в коттедже (2-3 человека в комнате, все удобства)
 • Питание 3 раза в день (домашняя кухня) + перекусы
 • Трансфер из Минска (туда и обратно)
 • Баня на дровах + полноразмерный бассейн
@@ -278,13 +279,13 @@ async function showPrice(chatId) {
 • Рабочая тетрадь участницы
 • Подарки от организаторов
 
-💳 *УСЛОВИЯ ОПЛАТЫ*
+💳 УСЛОВИЯ ОПЛАТЫ
 Предоплата 200 BYN — бронирует место.
 Остаток 400 BYN — при заезде.
 
 ❓ Рассрочка возможна — уточните у организатора.
 
-*Что вы забираете с собой:*
+Что вы забираете с собой:
 • Внутреннюю точку опоры
 • Освобождение от страхов (через встречу с ними)
 • Родовую развязку (выход из чужих сценариев)
@@ -294,13 +295,13 @@ async function showPrice(chatId) {
 🌐 ${SITE_URL}
 
 ❗ Всего 12 мест. Группа камерная — важно успеть`,
-        { parse_mode: 'Markdown', disable_web_page_preview: true });
+        { disable_web_page_preview: true });
     await showRetreatMenu(chatId);
 }
 
 async function showPractices(chatId) {
     await bot.sendMessage(chatId,
-        `🧘‍♀️ *ЧТО МЫ БУДЕМ ДЕЛАТЬ НА РЕТРИТЕ*
+        `🧘‍♀️ ЧТО МЫ БУДЕМ ДЕЛАТЬ НА РЕТРИТЕ
 
 • Инь-йога — глубокое расслабление, отпускание напряжения
 • Янь-йога — энергия, движение, активация
@@ -313,9 +314,9 @@ async function showPractices(chatId) {
 • Мандала выбора цвета — символ вашего баланса
 • Банные ритуалы + бассейн — очищение тела
 
-*"Ретрит — это не про отдых. Это про возвращение к себе".*
+"Ретрит — это не про отдых. Это про возвращение к себе".
 
-🚗 *ТРАНСФЕР ИЗ МИНСКА*
+🚗 ТРАНСФЕР ИЗ МИНСКА
 Выезд: 29 мая (место посадки сообщим после бронирования)
 Возвращение: 31 мая после обеда, около 17:00
 
@@ -324,48 +325,48 @@ async function showPractices(chatId) {
 🌐 ${SITE_URL}
 
 📞 По всем вопросам: @${ORGANIZER_TG}`,
-        { parse_mode: 'Markdown', disable_web_page_preview: true });
+        { disable_web_page_preview: true });
     await showRetreatMenu(chatId);
 }
 
 async function showFAQ(chatId) {
     await bot.sendMessage(chatId,
-        `❓ *ЧАСТЫЕ ВОПРОСЫ (FAQ)*
+        `❓ ЧАСТЫЕ ВОПРОСЫ (FAQ)
 
-1️⃣ *Нужен ли опыт йоги или практик?*
+1️⃣ Нужен ли опыт йоги или практик?
 Нет. Все практики адаптированы под новичков. Ведущие подстраиваются под группу.
 
-2️⃣ *Что взять с собой?*
+2️⃣ Что взять с собой?
 Удобную одежду для практик, купальник, тёплые носки, сменную обувь.
 
-3️⃣ *Телефоны и связь?*
+3️⃣ Телефоны и связь?
 Телефоны сдаются на входе. Полное погружение в себя. В экстренном случае — телефон организатора.
 
-4️⃣ *Можно приехать с подругой?*
+4️⃣ Можно приехать с подругой?
 Да. Вы сможете жить в одной комнате — укажите это при бронировании.
 
-5️⃣ *Как оплатить?*
+5️⃣ Как оплатить?
 Предоплата 200 BYN — место ваше. Остаток при заезде. Перевод на карту или наличные.
 
-6️⃣ *Условия возврата предоплаты?*
+6️⃣ Условия возврата предоплаты?
 При отмене за 2 недели — возврат 100%. За 3 дня — возврат 50%. За 1 день — без возврата.
 
-7️⃣ *Питание: что готовят?*
+7️⃣ Питание: что готовят?
 Домашняя кухня. Вкусно, сытно, с любовью. При аллергиях — предупредите.
 
-8️⃣ *Можно ли приехать одной?*
+8️⃣ Можно ли приехать одной?
 Да, это опыт, который часто глубже проживается в одиночестве. Вы не будете одиноки — круг поддержит.
 
-9️⃣ *Что даёт мандала выбора цвета?*
+9️⃣ Что даёт мандала выбора цвета?
 Вы выбираете чёрный (Янь/сила) или белый (Инь/принятие) шнур. А на третий день добавляете второй — это становится вашим личным символом баланса.
 
-🔟 *Ретрит — это про религию?*
+🔟 Ретрит — это про религию?
 Нет. Это про женскую силу, тело, тишину и осознанность. Без привязки к конфессиям.
 
 🌐 ${SITE_URL}
 
 Есть другие вопросы? Напишите @${ORGANIZER_TG}`,
-        { parse_mode: 'Markdown', disable_web_page_preview: true });
+        { disable_web_page_preview: true });
     await showRetreatMenu(chatId);
 }
 
@@ -1007,14 +1008,14 @@ bot.onText(/🌐 Сайт/, (msg) => bot.sendMessage(msg.chat.id, `🌐 ${SITE_U
 // ===== АДМИНИСТРАТОРСКИЕ КОМАНДЫ =====
 bot.onText(/\/stats/, (msg) => {
     if (msg.from.username !== ADMIN_ID && msg.chat.id.toString() !== ADMIN_ID) return bot.sendMessage(msg.chat.id, '⛔ Только для организатора');
-    bot.sendMessage(msg.chat.id, `📊 *СТАТИСТИКА*
+    bot.sendMessage(msg.chat.id, `📊 СТАТИСТИКА
 
 👥 Всего пользователей: ${userStats.total}
 ✅ Начали диалог: ${userStats.started}
 🌓 Прошли тест: ${userStats.completedTest}
 📞 Оставили телефон: ${userStats.leftPhone}
 
-🌐 ${SITE_URL}`, { parse_mode: 'Markdown' });
+🌐 ${SITE_URL}`);
 });
 
 bot.onText(/\/zayavki/, (msg) => {
@@ -1027,7 +1028,7 @@ bot.onText(/\/zayavki/, (msg) => {
     
     try {
         const users = JSON.parse(fs.readFileSync('users.json', 'utf8') || '{}');
-        let text = '📞 *НОВЫЕ ЗАЯВКИ*\n\n';
+        let text = '📞 НОВЫЕ ЗАЯВКИ\n\n';
         let count = 0;
         
         for (const [id, user] of Object.entries(users)) {
@@ -1036,17 +1037,17 @@ bot.onText(/\/zayavki/, (msg) => {
                 const name = user.name || 'Без имени';
                 const phone = user.phone;
                 const date = new Date(user.updated || user.phoneLeftAt).toLocaleString();
-                text += `${count}. 👤 *${name}*\n   📞 ${phone}\n   🕐 ${date}\n\n`;
+                text += `${count}. 👤 ${name}\n   📞 ${phone}\n   🕐 ${date}\n\n`;
             }
         }
         
         if (count === 0) {
             text = '📭 Пока нет новых заявок';
         } else {
-            text = `📞 *ЗАЯВКИ (${count})*\n\n` + text.substring(text.indexOf('\n\n') + 2);
+            text = `📞 ЗАЯВКИ (${count})\n\n` + text.substring(text.indexOf('\n\n') + 2);
         }
         
-        bot.sendMessage(chatId, text, { parse_mode: 'Markdown' });
+        bot.sendMessage(chatId, text);
     } catch(e) {
         bot.sendMessage(chatId, '❌ Ошибка при чтении заявок');
         console.log(e);
@@ -1061,7 +1062,7 @@ bot.onText(/\/invites/, (msg) => {
     
     try {
         const invites = JSON.parse(fs.readFileSync('invites.json', 'utf8') || '{}');
-        let text = '👭 *СПИСОК ПРИГЛАШЕНИЙ*\n\n';
+        let text = '👭 СПИСОК ПРИГЛАШЕНИЙ\n\n';
         let count = 0;
         
         for (const [friend, data] of Object.entries(invites)) {
@@ -1073,7 +1074,7 @@ bot.onText(/\/invites/, (msg) => {
         }
         
         if (count === 0) text = '📭 Пока нет приглашений';
-        bot.sendMessage(msg.chat.id, text, { parse_mode: 'Markdown' });
+        bot.sendMessage(msg.chat.id, text);
     } catch(e) {
         bot.sendMessage(msg.chat.id, '📭 Пока нет приглашений');
     }
