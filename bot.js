@@ -36,27 +36,25 @@ async function safeSend(chatId, content, options = {}, retries = 3) {
 // ===== СОЗДАНИЕ БОТА (СТАБИЛЬНАЯ ВЕРСИЯ) =====
 const bot = new TelegramBot(TOKEN, { 
     polling: {
-        interval: 3000,      // Увеличен интервал для стабильности
+        interval: 3000,
         autoStart: true,
         params: {
-            timeout: 60,     // Увеличен таймаут
+            timeout: 60,
             allowed_updates: ['message', 'callback_query']
         }
     },
     request: {
-        timeout: 60000       // Увеличен таймаут запросов
+        timeout: 60000
     }
 });
 
 // ===== МЯГКАЯ ОБРАБОТКА ОШИБОК (БЕЗ ПЕРЕЗАПУСКА) =====
 process.on('uncaughtException', (error) => {
     console.log('❌ Необработанная ошибка:', error.message);
-    // НЕ выходим из процесса - просто логируем
 });
 
 process.on('unhandledRejection', (error) => {
     console.log('❌ Необработанный rejection:', error);
-    // НЕ выходим из процесса - просто логируем
 });
 
 bot.on('polling_error', (error) => {
@@ -916,7 +914,6 @@ const inviteHandler = async (msg) => {
     
     const inviterName = msg.from.first_name;
     const botUsername = (await bot.getMe()).username;
-    // ИСПРАВЛЕНО: добавлено подчёркивание после ref
     const inviteLink = `https://t.me/${botUsername}?start=ref_${chatId}`;
     
     let invites = {};
