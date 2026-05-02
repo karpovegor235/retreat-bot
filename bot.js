@@ -1070,24 +1070,23 @@ const inviteHandler = async (msg) => {
     };
     fs.writeFileSync('invites.json', JSON.stringify(invites, null, 2));
     
-    // СООБЩЕНИЕ 1 (без тире и лишних звёздочек)
+    // СООБЩЕНИЕ 1 (БЕЗ ОПАСНЫХ СИМВОЛОВ)
     await bot.sendMessage(chatId,
-        `👭 *Персональная ссылка для @${friendUsername}*
+        `👭 Персональная ссылка для @${friendUsername}
 
 Отправь ей это сообщение:
 
-🌸 ${inviterName} приглашает тебя на ретрит!`,
-        { parse_mode: 'Markdown' }
+🌸 ${inviterName} приглашает тебя на ретрит!`
     );
     
     await new Promise(r => setTimeout(r, 500));
     
-    // СООБЩЕНИЕ 2
-    await bot.sendMessage(chatId, `🔗 *Твоя персональная ссылка со скидкой:*\n${inviteLink}`, { parse_mode: 'Markdown' });
+    // СООБЩЕНИЕ 2 (ССЫЛКА)
+    await bot.sendMessage(chatId, `🔗 Твоя персональная ссылка со скидкой:\n${inviteLink}`);
     
     await new Promise(r => setTimeout(r, 500));
     
-    // СООБЩЕНИЕ 3 (убраны все опасные звёздочки)
+    // СООБЩЕНИЕ 3 (БЕЗ MARKDOWN)
     await bot.sendMessage(chatId,
         `По этой ссылке у тебя будет скидка 10% на ретрит «Инь·Янь. Баланс»
 
@@ -1115,8 +1114,7 @@ const inviteHandler = async (msg) => {
 
 После отправки номера телефона скидка 10% на следующий ретрит активируется для вас обеих
 
-💚 Статус приглашения можно проверить у организатора @${ORGANIZER_TG}`,
-        { disable_web_page_preview: true }
+💚 Статус приглашения можно проверить у организатора @${ORGANIZER_TG}`
     );
     
     delete userDialogs[chatId];
