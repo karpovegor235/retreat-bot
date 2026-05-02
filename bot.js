@@ -18,40 +18,19 @@ const PHOTOS = [
     '1GwcICQaqLs0-tJDLFdW1UYUFJTJC7yRc'
 ];
 
-// Функция для создания бота с автоматическим перезапуском
-let bot;
-let pollingTimeout;
+// ===== СОЗДАНИЕ БОТА (ПРОСТОЕ, БЕЗ АВТОПЕРЕЗАПУСКА) =====
+const bot = new TelegramBot(TOKEN, { polling: true });
 
-function createBot() {
-    if (bot) {
-        try {
-            bot.stopPolling();
-        } catch(e) {}
-    }
-    
-    bot = new TelegramBot(TOKEN, { polling: true });
-    
-    bot.on('polling_error', (error) => {
-        console.log('❌ Ошибка polling:', error.code, error.message);
-        
-        if (error.code === 'ETELEGRAM' && error.message.includes('409 Conflict')) {
-            console.log('🔄 Обнаружен конфликт! Перезапуск бота через 5 секунд...');
-            setTimeout(() => {
-                console.log('🚀 Перезапуск бота...');
-                createBot();
-            }, 5000);
-        }
-    });
-    
-    bot.on('error', (error) => {
-        console.log('❌ Ошибка бота:', error);
-    });
-    
-    console.log('✅ Бот создан и подключён');
-    return bot;
-}
+bot.on('polling_error', (error) => {
+    console.log('❌ Ошибка polling:', error.code, error.message);
+    // НЕ ПЕРЕЗАПУСКАЕМ - просто логируем
+});
 
-bot = createBot();
+bot.on('error', (error) => {
+    console.log('❌ Ошибка бота:', error);
+});
+
+console.log('✅ Бот создан и подключён');
 
 const userDialogs = {};
 const testAnswers = {};
@@ -546,7 +525,6 @@ bot.on('message', (msg) => {
         saveUser(chatId, d.data);
         delete userDialogs[chatId];
         
-        // БЛАГОДАРНОСТЬ С АНАЛИЗОМ ОТВЕТОВ
         let analysisMessage = `🤍 *Спасибо за твои ответы, ${name}!*
 
 Я сохранила их для себя, чтобы лучше понять, что тебе сейчас важно.
@@ -587,21 +565,18 @@ bot.on('callback_query', async (query) => {
 
     console.log(`🔔 ${data} от ${chatId}`);
 
-    // БРОНИРОВАНИЕ
     if (data === 'booking') {
         await askForPhone(chatId);
         await bot.answerCallbackQuery(query.id);
         return;
     }
 
-    // ГЛАВНОЕ МЕНЮ
     if (data === 'show_main_menu') {
         await showMainMenu(chatId);
         await bot.answerCallbackQuery(query.id);
         return;
     }
 
-    // МЕНЮ РЕТРИТА
     if (data === 'show_retreat_menu') {
         await showRetreatMenu(chatId);
         await bot.answerCallbackQuery(query.id);
@@ -652,7 +627,6 @@ bot.on('callback_query', async (query) => {
         return;
     }
 
-    // ДИАЛОГ (чувства, потребности, опыт, страхи)
     if (data === 'feel_tired' || data === 'feel_burned' || data === 'feel_energy' || data === 'feel_lost') {
         const map = { feel_tired: 'Устала', feel_burned: 'Выгорела', feel_energy: 'Полна энергии', feel_lost: 'Потеряла себя' };
         if (d && d.step === 'feeling') {
@@ -752,14 +726,12 @@ bot.on('callback_query', async (query) => {
         return;
     }
 
-    // ТЕСТ - показывает пояснение
     if (data === 'start_test') {
         await showTestExplanation(chatId);
         await bot.answerCallbackQuery(query.id);
         return;
     }
     
-    // НАЧАЛО ТЕСТА после пояснения
     if (data === 'start_test_real') {
         testAnswers[chatId] = [];
         await bot.editMessageText('🌓 Вопрос 1/3\n\nКогда проблема — действуешь или наблюдаешь?', {
@@ -776,7 +748,6 @@ bot.on('callback_query', async (query) => {
         return;
     }
 
-    // ОТВЕТЫ НА ТЕСТ
     if (data === 'test_yin' || data === 'test_yang') {
         if (!testAnswers[chatId]) testAnswers[chatId] = [];
         testAnswers[chatId].push(data);
@@ -826,7 +797,7 @@ bot.on('contact', (msg) => {
     updateStats('phone');
     bot.sendMessage(chatId, `✅ Спасибо! @${ORGANIZER_TG} свяжется с вами.`);
     bot.sendMessage(chatId, `🌐 Подробнее о ретрите: ${SITE_URL}`);
-    bot.sendMessage(`@${ADMIN_ID}`, `📞 Новый лид: ${phone}`);
+    bot.sendMessage(ADMIN_ID, `📞 Новый лид: ${phone}`);
 });
 
 bot.on('message', (msg) => {
@@ -838,12 +809,11 @@ bot.on('message', (msg) => {
         updateStats('phone');
         bot.sendMessage(chatId, `✅ Спасибо! @${ORGANIZER_TG} свяжется с вами.`);
         bot.sendMessage(chatId, `🌐 Подробнее о ретрите: ${SITE_URL}`);
-        bot.sendMessage(`@${ADMIN_ID}`, `📞 Новый лид: ${phone}`);
+        bot.sendMessage(ADMIN_ID, `📞 Новый лид: ${phone}`);
     }
 });
 
 // ===== ПРИГЛАСИТЬ ПОДРУГУ =====
-// Обработчик кнопки "Пригласить подругу" из главного меню
 bot.onText(/👭 Пригласить подругу/, async (msg) => {
     const chatId = msg.chat.id;
     userDialogs[chatId] = { step: 'invite_friend', data: {} };
@@ -862,8 +832,7 @@ bot.onText(/👭 Пригласить подругу/, async (msg) => {
     );
 });
 
-// Обработка введённого username подруги
-bot.on('message', async (msg) => {
+const inviteHandler = async (msg) => {
     const chatId = msg.chat.id;
     const text = msg.text;
     const d = userDialogs[chatId];
@@ -877,6 +846,7 @@ bot.on('message', async (msg) => {
     
     if (!friendUsername || friendUsername.length < 3) {
         bot.sendMessage(chatId, '❌ Пожалуйста, напиши корректный username, например: @anna или просто anna');
+        delete userDialogs[chatId];
         return;
     }
     
@@ -884,7 +854,6 @@ bot.on('message', async (msg) => {
     const botUsername = (await bot.getMe()).username;
     const inviteLink = `https://t.me/${botUsername}?start=ref_${chatId}`;
     
-    // Сохраняем приглашение
     let invites = {};
     try { invites = JSON.parse(fs.readFileSync('invites.json')); } catch(e) {}
     
@@ -925,9 +894,10 @@ ${inviteLink}
     );
     
     delete userDialogs[chatId];
-});
+};
 
-// Команда /confirm — подтверждение бронирования подругой
+bot.on('message', inviteHandler);
+
 bot.onText(/\/confirm/, async (msg) => {
     const chatId = msg.chat.id;
     const username = msg.from.username;
@@ -976,7 +946,7 @@ bot.onText(/\/confirm/, async (msg) => {
     );
 });
 
-// ===== КНОПКИ ГЛАВНОГО МЕНЮ (текстовые команды) =====
+// ===== КНОПКИ ГЛАВНОГО МЕНЮ =====
 bot.onText(/🧘‍♀️ Начать подбор/, (msg) => {
     userDialogs[msg.chat.id] = { step: 'name', data: {} };
     bot.sendMessage(msg.chat.id, '🌿 Как тебя зовут?');
