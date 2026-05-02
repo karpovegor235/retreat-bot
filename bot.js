@@ -927,20 +927,23 @@ const inviteHandler = async (msg) => {
     };
     fs.writeFileSync('invites.json', JSON.stringify(invites, null, 2));
     
-    bot.sendMessage(chatId,
+    // ОТПРАВЛЯЕМ ПЕРВУЮ ЧАСТЬ - ПРИВЕТСТВИЕ
+    await bot.sendMessage(chatId,
         `👭 *Персональная ссылка для @${friendUsername}*
 
 Отправь ей это сообщение:
 
 ———
-🌸 *${inviterName} приглашает тебя на ретрит!*
-
-🔗 *Твоя персональная ссылка со скидкой:*
-${inviteLink}
-
-По этой ссылке у тебя будет скидка 10% на ретрит «Инь·Янь. Баланс»
-
-❕ *Важно:* ссылка персональная, только для тебя!
+🌸 *${inviterName} приглашает тебя на ретрит!*`,
+        { parse_mode: 'Markdown' }
+    );
+    
+    // ОТПРАВЛЯЕМ ССЫЛКУ ОТДЕЛЬНО (ГАРАНТИРОВАННО КЛИКАБЕЛЬНУЮ)
+    await bot.sendMessage(chatId, `🔗 *Твоя персональная ссылка со скидкой:*\n${inviteLink}`, { parse_mode: 'Markdown' });
+    
+    // ОТПРАВЛЯЕМ ОСТАЛЬНОЙ ТЕКСТ
+    await bot.sendMessage(chatId,
+        `❕ *Важно:* ссылка персональная, только для тебя!
 
 🌐 ${SITE_URL}
 ———
