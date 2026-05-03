@@ -1070,7 +1070,7 @@ const inviteHandler = async (msg) => {
     };
     fs.writeFileSync('invites.json', JSON.stringify(invites, null, 2));
     
-    // СООБЩЕНИЕ 1 (БЕЗ ОПАСНЫХ СИМВОЛОВ)
+    // СООБЩЕНИЕ 1
     await bot.sendMessage(chatId,
         `👭 Персональная ссылка для @${friendUsername}
 
@@ -1079,14 +1079,14 @@ const inviteHandler = async (msg) => {
 🌸 ${inviterName} приглашает тебя на ретрит!`
     );
     
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 1000));
     
-    // СООБЩЕНИЕ 2 (ССЫЛКА)
+    // СООБЩЕНИЕ 2
     await bot.sendMessage(chatId, `🔗 Твоя персональная ссылка со скидкой:\n${inviteLink}`);
     
-    await new Promise(r => setTimeout(r, 500));
+    await new Promise(r => setTimeout(r, 1000));
     
-    // СООБЩЕНИЕ 3 (БЕЗ MARKDOWN)
+    // СООБЩЕНИЕ 3
     await bot.sendMessage(chatId,
         `По этой ссылке у тебя будет скидка 10% на ретрит «Инь·Янь. Баланс»
 
