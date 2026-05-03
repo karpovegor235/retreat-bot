@@ -1242,11 +1242,10 @@ bot.onText(/\/sources/, (msg) => {
     }
     
     try {
-        let sources = {};
-        try { sources = JSON.parse(fs.readFileSync('sources.json')); } catch(e) {}
-        
+        // Загружаем пользователей
         const users = JSON.parse(fs.readFileSync('users.json', 'utf8') || '{}');
         
+        // Подсчитываем источники
         const sourceCount = {};
         let total = 0;
         
@@ -1256,22 +1255,38 @@ bot.onText(/\/sources/, (msg) => {
             total++;
         }
         
+        if (total === 0) {
+            bot.sendMessage(msg.chat.id, '📊 Статистика пока пуста. Нет пользователей.');
+            return;
+        }
+        
+        // Формируем сообщение
         let text = `📊 *СТАТИСТИКА ПЕРЕХОДОВ*\n\n`;
         text += `👥 Всего пользователей: *${total}*\n\n`;
         text += `📈 *По источникам:*\n`;
         
         const sorted = Object.entries(sourceCount).sort((a, b) => b[1] - a[1]);
         
+        const emoji = {
+            'instagram': '📱',
+            'telegram': '💬',
+            'newsletter': '📧',
+            'channel': '📢',
+            'friend': '👭',
+            'прямой заход': '🔗'
+        };
+        
         for (const [source, count] of sorted) {
             const percent = Math.round(count / total * 100);
-            text += `\n🔗 ${source}: *${count}* (${percent}%)`;
+            const em = emoji[source] || '🔗';
+            text += `\n${em} ${source}: *${count}* (${percent}%)`;
         }
         
         bot.sendMessage(msg.chat.id, text, { parse_mode: 'Markdown' });
         
     } catch(e) {
-        bot.sendMessage(msg.chat.id, '❌ Ошибка при чтении статистики');
-        console.log(e);
+        console.log('Ошибка в /sources:', e.message);
+        bot.sendMessage(msg.chat.id, '📊 Статистика пока пуста. Нет данных о пользователях.');
     }
 });
 // ===== СЕРВЕР =====
