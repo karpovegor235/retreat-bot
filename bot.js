@@ -466,13 +466,12 @@ function checkReminders() {
 setInterval(checkReminders, 1000 * 60 * 60 * 6);
 
 // ===== /start =====
-bot.onText(/\/start(?: ref_(.+)| from_(.+))?/, (msg, match) => {
+bot.onText(/\/start(?:\?start=(.+))?/, (msg, match) => {
     const chatId = msg.chat.id;
-    const referrerId = match[1];
-    const source = match[2];
+    const startParam = match[1]; // 'gift', 'ref_123', 'from_instagram', 'from_site'
     
     // ===== ПОДАРОК С САЙТА =====
-    if (source === 'gift') {
+    if (startParam === 'gift') {
         const giftText = `🎁 *Твой подарок!*
 
 Ты прошла тест на сайте — и это уже шаг к себе.
@@ -492,9 +491,26 @@ bot.onText(/\/start(?: ref_(.+)| from_(.+))?/, (msg, match) => {
 Начни диалог, и я покажу, что ещё может быть полезным 🤍`;
 
         bot.sendMessage(chatId, giftText, { parse_mode: 'Markdown', disable_web_page_preview: true });
-        
         setTimeout(() => showMainMenu(chatId), 2000);
         return;
+    }
+    
+    // ===== РЕФЕРАЛЬНАЯ ССЫЛКА (ref_123) =====
+    if (startParam && startParam.startsWith('ref_')) {
+        const referrerId = startParam.replace('ref_', '');
+        saveUser(chatId, { referredBy: referrerId });
+        bot.sendMessage(chatId, 
+            `🌸 *Привет!* Тебя пригласила подруга!\n\nУ тебя есть скидка 10% на ретрит.\n\nДавай познакомимся? Как тебя зовут?`,
+            { parse_mode: 'Markdown' }
+        );
+        userDialogs[chatId] = { step: 'name', data: { referrerId } };
+        return;
+    }
+    
+    // ===== ИСТОЧНИК ДЛЯ СТАТИСТИКИ (from_instagram, from_site и т.д.) =====
+    let source = null;
+    if (startParam && startParam.startsWith('from_')) {
+        source = startParam;
     }
     
     // Если диалог уже начат - не сбиваем его
@@ -519,16 +535,9 @@ bot.onText(/\/start(?: ref_(.+)| from_(.+))?/, (msg, match) => {
         fs.writeFileSync('sources.json', JSON.stringify(sources, null, 2));
     }
     
-    if (referrerId) {
-        saveUser(chatId, { referredBy: referrerId });
-        bot.sendMessage(chatId, 
-            `🌸 *Привет!* Тебя пригласила подруга!\n\nУ тебя есть скидка 10% на ретрит.\n\nДавай познакомимся? Как тебя зовут?`,
-            { parse_mode: 'Markdown' }
-        );
-        userDialogs[chatId] = { step: 'name', data: { referrerId } };
-    } else {
-        userDialogs[chatId] = { step: 'name', data: {} };
-        bot.sendMessage(chatId, `✨ Привет! Я — *твой помощник* 🤍
+    // Обычное приветствие
+    userDialogs[chatId] = { step: 'name', data: {} };
+    bot.sendMessage(chatId, `✨ Привет! Я — *твой помощник* 🤍
 
 Меня зовут Ци. Я Энергия, которая течёт между покоем и действием. На ретрите «Инь·Янь. Баланс» я буду твоим проводником.
 
@@ -541,9 +550,8 @@ bot.onText(/\/start(?: ref_(.+)| from_(.+))?/, (msg, match) => {
 • И никакого спама — только забота и поддержка
 
 💬 *Как тебя зовут?* (просто напиши имя)`,
-             { parse_mode: 'Markdown' }
-         );
-    }   
+        { parse_mode: 'Markdown' }
+    );
 });
 // ===== ДИАЛОГ =====
 bot.on('message', (msg) => {
