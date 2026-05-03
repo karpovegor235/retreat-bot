@@ -1235,17 +1235,21 @@ bot.onText(/\/invites/, (msg) => {
         bot.sendMessage(msg.chat.id, '📭 Пока нет приглашений');
     }
 });
-// ===== КОМАНДА /sources (статистика источников переходов) =====
+// ===== КОМАНДА /sources =====
 bot.onText(/\/sources/, (msg) => {
     if (msg.from.username !== ADMIN_ID && msg.chat.id.toString() !== ADMIN_ID) {
         return bot.sendMessage(msg.chat.id, '⛔ Только для организатора');
     }
     
+    // ПРОВЕРЯЕМ, ЕСТЬ ЛИ ФАЙЛ
+    if (!fs.existsSync('users.json')) {
+        bot.sendMessage(msg.chat.id, '📊 Статистика пока пуста. Нет зарегистрированных пользователей.');
+        return;
+    }
+    
     try {
-        // Загружаем пользователей
-        const users = JSON.parse(fs.readFileSync('users.json', 'utf8') || '{}');
+        const users = JSON.parse(fs.readFileSync('users.json', 'utf8'));
         
-        // Подсчитываем источники
         const sourceCount = {};
         let total = 0;
         
@@ -1260,33 +1264,22 @@ bot.onText(/\/sources/, (msg) => {
             return;
         }
         
-        // Формируем сообщение
         let text = `📊 *СТАТИСТИКА ПЕРЕХОДОВ*\n\n`;
         text += `👥 Всего пользователей: *${total}*\n\n`;
         text += `📈 *По источникам:*\n`;
         
         const sorted = Object.entries(sourceCount).sort((a, b) => b[1] - a[1]);
         
-        const emoji = {
-            'instagram': '📱',
-            'telegram': '💬',
-            'newsletter': '📧',
-            'channel': '📢',
-            'friend': '👭',
-            'прямой заход': '🔗'
-        };
-        
         for (const [source, count] of sorted) {
             const percent = Math.round(count / total * 100);
-            const em = emoji[source] || '🔗';
-            text += `\n${em} ${source}: *${count}* (${percent}%)`;
+            text += `\n🔗 ${source}: *${count}* (${percent}%)`;
         }
         
         bot.sendMessage(msg.chat.id, text, { parse_mode: 'Markdown' });
         
     } catch(e) {
         console.log('Ошибка в /sources:', e.message);
-        bot.sendMessage(msg.chat.id, '📊 Статистика пока пуста. Нет данных о пользователях.');
+        bot.sendMessage(msg.chat.id, '❌ Ошибка при чтении статистики');
     }
 });
 // ===== СЕРВЕР =====
