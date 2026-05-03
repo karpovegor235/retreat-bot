@@ -471,7 +471,7 @@ bot.onText(/\/start(?: ref_(.+)| from_(.+))?/, (msg, match) => {
     const referrerId = match[1];
     const source = match[2];
     
-    // ===== НОВЫЙ БЛОК: ПРОВЕРКА НА ПОДАРОК =====
+    // ===== ПОДАРОК С САЙТА =====
     if (source === 'gift') {
         const giftText = `🎁 *Твой подарок!*
 
@@ -494,9 +494,8 @@ bot.onText(/\/start(?: ref_(.+)| from_(.+))?/, (msg, match) => {
         bot.sendMessage(chatId, giftText, { parse_mode: 'Markdown', disable_web_page_preview: true });
         
         setTimeout(() => showMainMenu(chatId), 2000);
-        return;  // ← ВАЖНО! Выходим, чтобы не показывать обычное приветствие
+        return;
     }
-    // ===== КОНЕЦ НОВОГО БЛОКА =====
     
     // Если диалог уже начат - не сбиваем его
     if (userDialogs[chatId] && userDialogs[chatId].step) {
