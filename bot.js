@@ -470,36 +470,11 @@ bot.onText(/\/start(?:\?start=(.+))?/, (msg, match) => {
     const chatId = msg.chat.id;
     const startParam = match ? match[1] : null;
 
-    // Логируем параметр для отладки (проверьте логи Railway)
+    // Логируем параметр только для отладки (больше не используется)
     console.log(`🔍 /start от ${chatId}, параметр: "${startParam}"`);
 
-    // ===== ПОДАРОК С САЙТА (высший приоритет) =====
-    if (startParam === 'gift') {
-        // Удаляем любой незавершённый диалог, чтобы не мешал
-        if (userDialogs[chatId]) delete userDialogs[chatId];
-
-        const giftText = `🎁 *Твой подарок!*
-
-Ты прошла тест на сайте — и это уже шаг к себе.
-
-Внутри этого подарка тебя ждут:
-✨ *Инь-практика* — чтобы замедлиться, выдохнуть и разрешить себе просто быть
-⚡ *Янь-практика* — чтобы почувствовать энергию, движение и вернуть опору
-
-👇 Забирай:
-[СКАЧАТЬ 2 ПРАКТИКИ](${GIFT_LINK})
-
-🌿 *Что дальше?*
-• Узнать о ретрите «Инь·Янь. Баланс»
-• Пригласить подругу и получить скидку
-• Задать вопрос организатору
-
-Начни диалог, и я покажу, что ещё может быть полезным 🤍`;
-
-        bot.sendMessage(chatId, giftText, { parse_mode: 'Markdown', disable_web_page_preview: true });
-        setTimeout(() => showMainMenu(chatId), 2000);
-        return;
-    }
+    // Принудительно сбрасываем старый диалог, если он есть
+    if (userDialogs[chatId]) delete userDialogs[chatId];
 
     // ===== РЕФЕРАЛЬНАЯ ССЫЛКА (ref_123) =====
     if (startParam && startParam.startsWith('ref_')) {
@@ -519,12 +494,6 @@ bot.onText(/\/start(?:\?start=(.+))?/, (msg, match) => {
         source = startParam;
     }
 
-    // Если диалог уже начат - не сбиваем его (НО ТОЛЬКО ЕСЛИ НЕТ СПЕЦИАЛЬНОГО ПАРАМЕТРА)
-    if (userDialogs[chatId] && userDialogs[chatId].step) {
-        bot.sendMessage(chatId, '🤍 Мы уже знакомимся! Пожалуйста, ответь на вопрос или выбери вариант из меню.');
-        return;
-    }
-
     updateStats('start');
     saveUser(chatId, { name: msg.from.first_name });
 
@@ -541,129 +510,61 @@ bot.onText(/\/start(?:\?start=(.+))?/, (msg, match) => {
         fs.writeFileSync('sources.json', JSON.stringify(sources, null, 2));
     }
 
-    // Обычное приветствие
+    // Новое эмоциональное приветствие
     userDialogs[chatId] = { step: 'name', data: {} };
-    bot.sendMessage(chatId, `✨ Привет! Я — *твой помощник* 🤍
-
-Меня зовут Ци. Я Энергия, которая течёт между покоем и действием. На ретрите «Инь·Янь. Баланс» я буду твоим проводником.
-
-🌿 *Что я могу тебе дать:*
-
-• Помогу понять, чего тебе не хватает прямо сейчас
-• Проведу короткий тест «Инь / Янь» — увидишь свой баланс
-• Подарю 2 практики (расслабление + энергия) — сразу, без условий
-• Расскажу про ретрит, если будет интересно
-• И никакого спама — только забота и поддержка
-
-💬 *Как тебя зовут?* (просто напиши имя)`,
+    bot.sendMessage(chatId,
+        `✨ Привет, милая.\n` +
+        `Я — *Ци*, твой проводник на ретрите «Инь·Янь. Баланс».\n` +
+        `Я здесь, чтобы помочь тебе услышать себя.\n\n` +
+        `У меня для тебя есть *маленький подарок* — две практики: одна для глубокого расслабления, другая — чтобы почувствовать прилив энергии.\n\n` +
+        `💬 *Как тебя зовут?*\n` +
+        `Просто напиши своё имя — и я сразу передам подарок.\n` +
+        `(никаких лишних вопросов, обещаю)`,
         { parse_mode: 'Markdown' }
     );
 });
+
 // ===== ДИАЛОГ =====
 bot.on('message', (msg) => {
     const chatId = msg.chat.id;
     const d = userDialogs[chatId];
     if (!d) return;
 
+    // Единственный шаг: пользователь пишет имя
     if (d.step === 'name') {
-        d.data.name = msg.text;
-        d.step = 'feeling';
-        bot.sendMessage(chatId, `Приятно познакомиться, ${msg.text}! 🤍\n\nКак себя чувствуешь?`, {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: '🌿 Устала', callback_data: 'feel_tired' }],
-                    [{ text: '🌙 Выгорела', callback_data: 'feel_burned' }],
-                    [{ text: '⚡ Полна энергии', callback_data: 'feel_energy' }],
-                    [{ text: '😔 Потеряла себя', callback_data: 'feel_lost' }]
-                ]
-            }
-        });
-    }
-    else if (d.step === 'feeling') {
-        d.data.feeling = msg.text;
-        d.step = 'need';
-        bot.sendMessage(chatId, `Чего тебе не хватает?`, {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: '☾ Тишины', callback_data: 'need_silence' }],
-                    [{ text: '☾ Энергии', callback_data: 'need_energy' }],
-                    [{ text: '☾ Себя', callback_data: 'need_myself' }]
-                ]
-            }
-        });
-    }
-    else if (d.step === 'need') {
-        d.data.need = msg.text;
-        d.step = 'experience';
-        bot.sendMessage(chatId, `Был ли опыт на ретритах?`, {
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: '✨ Никогда', callback_data: 'exp_never' }],
-                    [{ text: '🌱 1-2 раза', callback_data: 'exp_few' }],
-                    [{ text: '🌸 Регулярно', callback_data: 'exp_many' }]
-                ]
-            }
-        });
-    }
-    else if (d.step === 'experience') {
-        d.data.exp = msg.text;
-        d.step = 'fears';
-        bot.sendMessage(chatId, `✨ *Готова к переменам?*`, {
-            parse_mode: 'Markdown',
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: '🌙 Да, но боюсь', callback_data: 'fears_afraid' }],
-                    [{ text: '⚡ Да, с нетерпением', callback_data: 'fears_eager' }],
-                    [{ text: '🤍 Пока не знаю', callback_data: 'fears_unsure' }]
-                ]
-            }
-        });
-    }
-    else if (d.step === 'fears') {
-        d.data.fears = msg.text;
-        const name = d.data.name;
-        const feeling = d.data.feeling;
-        const need = d.data.need;
-        const exp = d.data.exp;
-        const ready = msg.text;
+        const userName = msg.text;
+        // Сохраняем имя в диалог и в базу
+        d.data.name = userName;
+        saveUser(chatId, { name: userName });
         
-        saveUser(chatId, d.data);
+        // Завершаем пошаговый диалог (дальше только кнопки)
         delete userDialogs[chatId];
         
-        let readinessText = '';
-        if (ready === 'Да, но боюсь') readinessText = 'Ты готова к переменам, но чувствуешь лёгкое сопротивление — это нормально!';
-        else if (ready === 'Да, с нетерпением') readinessText = 'Ты готова к переменам и ждёшь их с нетерпением — это прекрасная энергия!';
-        else readinessText = 'Ты пока не уверена — это нормально. Давай просто посмотрим, что я могу тебе предложить';
+        // Отправляем подарок (используем существующую функцию getGift)
+        const giftMsg = getGift('balance', userName);
+        bot.sendMessage(chatId, giftMsg, { disable_web_page_preview: true });
         
-        let analysisMessage = `🤍 *Спасибо за твои ответы, ${name}!*
-
-Я сохранила их для себя, чтобы лучше понять, что тебе сейчас важно.
-
-💡 *Вот что я заметила:*
-• Тебе не хватает ${need.toLowerCase()}
-• Сейчас ты чувствуешь ${feeling.toLowerCase()}
-• ${exp === 'Никогда' ? 'Ретриты для тебя новое пространство — это прекрасно!' : (exp === '1-2 раза' ? 'У тебя уже есть небольшой опыт ретритов — ты знаешь, что это даёт' : 'Ты опытная участница — тебе знакомо глубинное погружение')}
-• ${readinessText}
-
-🎁 *У меня для тебя есть несколько предложений:*
-
-1. Пройти короткий тест «Инь/Янь» — чтобы увидеть свой баланс
-2. Получить 2 практики в подарок (расслабление + энергия)
-3. Узнать подробнее о ретрите «Инь·Янь. Баланс»
-
-Что выберешь?`;
-        
-        bot.sendMessage(chatId, analysisMessage, {
-            parse_mode: 'Markdown',
-            reply_markup: {
-                inline_keyboard: [
-                    [{ text: '🌓 ПРОЙТИ ТЕСТ', callback_data: 'start_test' }],
-                    [{ text: '🎁 ПОЛУЧИТЬ ПОДАРОК', callback_data: 'get_gift' }],
-                    [{ text: '🌿 О РЕТРИТЕ', callback_data: 'show_retreat_menu' }]
-                ]
+        // Отправляем тёплое сообщение с предложением выбора
+        bot.sendMessage(chatId,
+            `🌓 *Хочешь узнать, какая энергия (Инь или Янь) сейчас ведущая в твоей жизни и чего тебе не хватает?*\n\n` +
+            `• *Пройти тест «Свой цвет»* – 3 вопроса, узнаешь свой баланс и получишь ещё один совет.\n` +
+            `• *Рассказать о ретрите* – программа, место, стоимость, ведущие.\n\n` +
+            `Что выберешь?`,
+            {
+                parse_mode: 'Markdown',
+                reply_markup: {
+                    inline_keyboard: [
+                        [{ text: '🌓 ПРОЙТИ ТЕСТ', callback_data: 'start_test' }],
+                        [{ text: '🌿 О РЕТРИТЕ', callback_data: 'show_retreat_menu' }]
+                    ]
+                }
             }
-        });
+        );
+        return;
     }
+    
+    // Если по какой-то причине остался незавершённый диалог с другим шагом – просто удаляем
+    delete userDialogs[chatId];
 });
 
 // ===== ОБРАБОТЧИК КНОПОК (ГЛАВНЫЙ) =====
